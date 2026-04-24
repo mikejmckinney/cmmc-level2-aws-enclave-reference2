@@ -20,6 +20,11 @@ jobs:
   plan:
     name: terraform plan (read-only)
     runs-on: ubuntu-latest
+    # Skip on PRs from forks: OIDC role + region secrets are not exposed to
+    # untrusted workflows, so the AWS credential step would fail with
+    # "Input required and not supplied: aws-region". Reviewers can re-run
+    # the plan locally or maintainers can run it on a sync branch.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     env:
       TF_IN_AUTOMATION: "true"
       TF_INPUT: "false"
@@ -54,7 +59,13 @@ jobs:
 
       - name: terraform plan
         working-directory: terraform/demo
-        run: terraform plan -no-color -out=tfplan | tee plan.txt
+        # `set -o pipefail` so a failed `terraform plan` propagates through
+        # the `tee` and fails the step. Without it, the plan exit code is
+        # masked by tee's success and the workflow proceeds to comment a
+        # truncated/empty plan as if it had succeeded.
+        run: |
+          set -o pipefail
+          terraform plan -no-color -out=tfplan | tee plan.txt
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4

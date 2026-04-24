@@ -54,16 +54,21 @@ For each module under `terraform/modules/<name>/`:
   use, deny `kms:Decrypt` outside the partition
 
 #### `cloudtrail/`
-- Multi-region trail, log-file validation enabled, KMS-encrypted, Object
-  Lock-enabled S3 bucket (governance mode, 7-year retention default)
-- Includes management + S3 data events + Lambda data events
+- Multi-region trail (where the root enables it), log-file validation
+  enabled, KMS-encrypted, Object Lock-enabled S3 bucket (governance
+  mode, 7-year retention default)
+- Management events only in the v1 module. **S3 + Lambda data events
+  are tracked as a follow-up** (see issue #3 / postmortem-001 — the
+  recovery PR scoped them out)
 - CloudWatch Logs integration with metric filters for: root login, IAM
   policy change, console without MFA, KMS key disable
 
 #### `guardduty/`
 - Detector enabled with EKS audit logs, malware protection, S3 protection,
   RDS protection (toggleable via `var.features` map for cost control)
-- Findings exported to S3 (KMS-encrypted)
+- Findings remain in GuardDuty (no S3 export wired in v1; the
+  publishing-destination resource is a follow-up if/when an S3 bucket
+  for findings is provisioned)
 
 #### `config/`
 - AWS Config recorder (all resources + global)

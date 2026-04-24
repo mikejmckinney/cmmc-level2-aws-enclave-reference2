@@ -53,6 +53,12 @@ resource "aws_s3_bucket_object_lock_configuration" "trail" {
       years = var.object_lock_retention_years
     }
   }
+
+  # Object Lock requires versioning to be enabled. Terraform doesn't infer
+  # this dependency from the resource graph (both reference only the bucket),
+  # so without an explicit depends_on a fresh apply can race and fail with
+  # "Versioning must be enabled" on the Object Lock configuration.
+  depends_on = [aws_s3_bucket_versioning.trail]
 }
 
 data "aws_iam_policy_document" "trail_bucket" {
