@@ -50,7 +50,23 @@ Every `task_*.md` file lives in exactly one of these states. Transitions are one
 
 ## Active Locks
 
-<!-- No active locks. Add new locks here using the template above. -->
+## Lock: pr1-fix-critical-and-trivial
+**Role**: devops
+**Session**: branch `fix/pr1-critical-and-trivial`
+**Claimed At**: 2026-04-24
+**Expected Duration**: 1 session
+**Paths**:
+- `terraform/modules/kms/**`
+- `terraform/modules/cloudtrail/main.tf`
+- `terraform/govcloud/main.tf`
+- `terraform/demo/main.tf`
+- `.github/workflows/demo-plan.yml`
+- `.github/prompts/03-terraform-shared-modules.md`
+- `diagrams/network.md`
+- `.context/state/coordination.md`
+**Depends On**: PR #1 (recovery — base for branch); issue #3 (defines scope)
+**Blocks**: none
+**State**: in_progress
 
 ## Recent History
 
