@@ -30,6 +30,10 @@ module "kms" {
     logs = {
       description       = "CMK for CloudTrail / CloudWatch Logs / Config delivery."
       additional_admins = var.kms_admin_principal_arns
+      service_principals = [
+        "cloudtrail.amazonaws.com",
+        "logs.${var.region}.amazonaws.com",
+      ]
     }
     data = {
       description       = "CMK for CUI data at rest (S3, EBS, RDS in workload modules)."
@@ -38,6 +42,9 @@ module "kms" {
     config = {
       description       = "CMK for AWS Config delivery channel."
       additional_admins = var.kms_admin_principal_arns
+      service_principals = [
+        "config.amazonaws.com",
+      ]
     }
   }
 }

@@ -29,6 +29,10 @@ module "kms" {
   keys = {
     logs = {
       description = "Demo CMK for logs / CloudTrail / Lambda env vars."
+      service_principals = [
+        "cloudtrail.amazonaws.com",
+        "logs.${var.region}.amazonaws.com",
+      ]
     }
     data = {
       description = "Demo CMK for data at rest (none in this demo, but stamped for parity)."

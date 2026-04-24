@@ -58,10 +58,31 @@ data "aws_iam_policy_document" "key" {
     }
   }
 
-  # Deny use outside this AWS partition. Defense-in-depth: prevents an
-  # exfiltrated key reference from being used from an unexpected partition.
+  # AWS service principals granted standard data-plane access. Required for
+  # services that perform server-side encryption against the key directly —
+  # e.g. CloudTrail, Config, CloudWatch Logs. Without this, applies that wire
+  # the key into those services succeed but the services fail at runtime.
+  dynamic "statement" {
+    for_each = length(each.value.service_principals) > 0 ? [1] : []
+    content {
+      sid    = "AllowServicePrincipalUsage"
+      effect = "Allow"
+      actions = [
+        "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*",
+        "kms:GenerateDataKey*", "kms:DescribeKey",
+      ]
+      resources = ["*"]
+      principals {
+        type        = "Service"
+        identifiers = each.value.service_principals
+      }
+    }
+  }
+
+  # Deny use outside this AWS account. Defense-in-depth: prevents a
+  # compromised key reference from being used cross-account.
   statement {
-    sid       = "DenyOutsidePartition"
+    sid       = "DenyOutsideAccount"
     effect    = "Deny"
     actions   = ["kms:*"]
     resources = ["*"]
