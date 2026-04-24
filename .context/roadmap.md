@@ -82,11 +82,13 @@ URL, MSP/DIB sub-sections, disclaimer.
 live demo URL or `TODO(demo-url)` marker present; disclaimer paragraph
 intact.
 
-> **All 7 phases shipped 2026-04-24.** The original work was performed
-> directly in the working tree without any branch/commit/PR; recovered
-> retroactively in branch `recovery/phases-1-7-uncommitted-work`. See
-> [`docs/postmortems/postmortem-001-workflow-bypass.md`](../docs/postmortems/postmortem-001-workflow-bypass.md)
-> for root cause and corrective actions.
+> **All 7 phases completed 2026-04-24** (recovered retroactively;
+> see [`docs/postmortems/postmortem-001-workflow-bypass.md`](../docs/postmortems/postmortem-001-workflow-bypass.md)).
+> The original work was performed directly in the working tree without
+> any branch/commit/PR; recovered in branch
+> `recovery/phases-1-7-uncommitted-work` and merged via PR #1. The
+> phases were never "shipped" in the conventional sense \u2014 they were
+> reconstructed from the working tree.
 
 ## Future / out-of-scope (not on this roadmap)
 
