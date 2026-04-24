@@ -5,7 +5,10 @@
 #   1. Number of `#### 3.x.y` headers in SSP == number of data rows in CSV (110)
 #   2. Exactly 100 stubs with `Implementation status: TODO`
 #   3. Every CSV row with `addressed_by_repo=full` has a non-TODO SSP entry
-#   4. (csv-ssp-sync runs in the workflow as a separate job)
+#   4. CSV `addressed_by_repo` value matches SSP `Implementation status:` per
+#      control (full↔Full, partial↔Partial, none↔TODO|Not applicable). Catches
+#      drift where the CSV claims more coverage than the SSP narrative supports.
+#   5. (csv-ssp-sync runs in the workflow as a separate job)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -54,6 +57,63 @@ for cid in $full_ids; do
 done
 
 if [ "$fail" != "0" ]; then
+  exit 1
+fi
+
+# Rule 4 — Detect CSV/SSP overclaim & contradiction. Catches drift where the
+# CSV claims more coverage than the SSP narrative supports (or vice versa).
+# Allowed combinations:
+#   CSV full    → SSP Full | Implemented            (rejects: Partial, TODO, Not applicable)
+#   CSV partial → SSP Partial | TODO                (rejects: Full, Implemented, Not applicable — partial-but-written stubs are OK as TODO)
+#   CSV none    → SSP TODO  | Not applicable        (rejects: Full, Implemented, Partial)
+# `Implemented` is accepted as a synonym for `Full` for backwards-compat with
+# the original SSP vocabulary; new entries should prefer `Full`.
+mismatches=$(python3 - <<'PY'
+import csv, re, sys
+
+allowed = {
+    "full":    {"Full", "Implemented"},
+    "partial": {"Partial", "TODO"},
+    "none":    {"TODO", "Not applicable"},
+}
+
+with open("ssp/SSP.md") as fh:
+    ssp = fh.read()
+
+ssp_status = {}
+current = None
+for line in ssp.splitlines():
+    m = re.match(r"^#### (3\.\d+\.\d+) ", line)
+    if m:
+        current = m.group(1)
+        continue
+    if current and line.startswith("**Implementation status:**"):
+        val = line.replace("**Implementation status:**", "").strip().rstrip("\\").strip()
+        ssp_status[current] = val
+        current = None
+
+bad = []
+with open("controls/nist-800-171-mapping.csv") as fh:
+    for row in csv.DictReader(fh):
+        cid = row["control_id"]
+        csv_v = row["addressed_by_repo"]
+        ssp_v = ssp_status.get(cid)
+        if ssp_v is None:
+            bad.append(f"{cid}: missing SSP entry")
+            continue
+        ok = allowed.get(csv_v, set())
+        if ssp_v not in ok:
+            bad.append(f"{cid}: CSV={csv_v} but SSP=\"{ssp_v}\" (expected one of: {sorted(ok)})")
+
+for line in bad:
+    print(line)
+sys.exit(1 if bad else 0)
+PY
+) || mismatch_fail=1
+
+if [ "${mismatch_fail:-0}" != "0" ]; then
+  echo "FAIL: CSV addressed_by_repo / SSP Implementation status drift detected:"
+  echo "$mismatches"
   exit 1
 fi
 
