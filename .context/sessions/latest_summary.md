@@ -1,64 +1,69 @@
-<!-- TEMPLATE_PLACEHOLDER: Update after each session -->
-
 # Latest Session Summary
 
-> **Purpose**: Capture what happened in the most recent session, especially decisions and lessons learned. This prevents repeating mistakes and enables cognitive handoff.
->
-> **Note**: For current task progress, see `.context/state/_active.md` or `task_*.md`
+> Most recent agent session summary. Roles append a short entry here at
+> task close-out per [`AGENTS.md`](../../AGENTS.md) → "Session-state cadence".
 
-## Session Info
+## 2026-04-24 — Phase 1 init (DevOps + Docs)
 
-**Date**: Not yet started  
-**Duration**: N/A  
-**Agent/Developer**: N/A
+**Shipped**: De-templatized the repo per
+[`.github/prompts/01-init-project.md`](../../.github/prompts/01-init-project.md):
+project-stub README, regenerated AI_REPO_GUIDE, fresh `.context/` content
+(00_INDEX, roadmap, vision, rules/README, this file), Apache-2.0 LICENSE,
+project-specific FAQ and docs/README, extended
+`.context/rules/agent_ownership.md` with rows for `terraform/**`,
+`controls/**`, `ssp/**`, `diagrams/**`, `.github/workflows/demo-*.yml`,
+fixed `.github/ISSUE_TEMPLATE/config.yml` owner/repo, updated
+`.github/agents/{backend,frontend,qa}.agent.md` globs, set Terraform/HCL
+thresholds in `.context/rules/domain_code_quality.md`.
 
-## What Was Accomplished
+**Harder than expected**: the template's `TEMPLATE_PLACEHOLDER` marker is
+referenced both as stub-content scaffolding AND as load-bearing
+mechanism documentation in `AGENTS.md`, `.github/copilot-instructions.md`,
+`scripts/verify-env.sh`, and the docs.agent.md role file. Strict-zero
+removal would break template re-detection. Mechanism references kept
+intact; only stub-content markers removed.
 
-<!-- List concrete outcomes, not just "worked on X" -->
+**Generalizes**: any "scrub all instances of marker X" prompt needs to
+distinguish marker-as-content from marker-as-implementation. Worth
+folding into the next revision of the template's onboarding prompt.
 
-- No sessions recorded yet
+**Next**: prompt 02 (architecture + Mermaid network diagram).
 
-## Key Decisions Made
+## 2026-04-24 — Phases 2–7 implementation (workflow bypass; not committed)
 
-<!-- Document decisions AND their rationale -->
+**Shipped (in working tree only — never committed, never reviewed)**: All
+remaining roadmap phases per `.github/prompts/02–10`:
 
-| Decision | Rationale |
-|----------|-----------|
-| N/A | N/A |
+- Phase 2: `diagrams/network.md` (Mermaid) + scaffold dirs.
+- Phase 3: six partition-aware modules under `terraform/modules/`
+  (vpc, iam_baseline, kms, cloudtrail, guardduty, config).
+- Phase 4: `terraform/govcloud/` (validate-only) and `terraform/demo/`
+  (deployable, with Lambda disclaimer page).
+- Phase 5: `controls/nist-800-171-mapping.csv` (110 controls + schema)
+  and `ssp/SSP.md` (10 written / 100 TODO) plus generator/checker scripts.
+- Phase 6: `.github/workflows/{demo-plan,demo-deploy,demo-destroy,
+  terraform-ci,compliance-checks}.yml` and `docs/demo-deploy.md`.
+- Phase 7: launch-narrative `README.md` overwriting the Phase 1 stub.
 
-## What Didn't Work
+**What went wrong**: the agent session that performed Phases 2–7 worked
+directly on `main` in the working tree and never created a branch,
+commit, push, PR, or issue. Verified after the fact: only one commit on
+`main` (`c39ca53 Initial commit`); zero branches; zero PRs; zero issues.
+There was also no `.gitignore`, so `terraform init` left ~90 MB of
+provider binaries staged for accidental commit.
 
-<!-- IMPORTANT: This prevents the next session from repeating failed approaches -->
+**Generalizes**: yes — see `docs/postmortems/postmortem-001-workflow-bypass.md`.
+Root cause: AGENTS.md describes the multi-agent workflow as "claim →
+implement → review → merge" but never states the precondition "create a
+feature branch and commit before you start." Agents inferred from the
+absence that working on `main` was acceptable.
 
-| Approach Tried | Why It Failed |
-|----------------|---------------|
-| N/A | N/A |
+**Recovery**: this session reconstructed the work into a branch
+(`recovery/phases-1-7-uncommitted-work`) with one logical commit per
+phase, opened a PR, wrote the postmortem, and filed a Phase 8 follow-up
+issue. Session-state cadence rule was also missed; this entry plus
+`.context/state/handoff_phases-1-7-recovery.md` are the corrective.
 
-## Problems Encountered
-
-<!-- Issues that came up and how they were resolved (or not) -->
-
-None yet.
-
-## Next Session Should
-
-<!-- Specific, actionable recommendations -->
-
-1. Initialize the project from this template
-2. Fill in `.context/00_INDEX.md` with project details
-3. Define the roadmap in `.context/roadmap.md`
-
-## Environment Notes
-
-<!-- Any setup issues, dependency problems, or environment quirks discovered -->
-
-None yet.
-
----
-
-## How to Use This File
-
-1. **End of session**: Update all sections above
-2. **Key insight**: The "What Didn't Work" section is the most valuable—it prevents wasted effort
-3. **Archiving**: Optionally copy to a dated file (e.g., `2025-01-25_auth.md`) before starting fresh
-4. **Start of session**: Read this file to understand recent context before beginning work
+**Next**: merge the recovery PR, then resume normal cadence —
+stakeholder review of phases 1–7 (per `coordination.md` state machine)
+or proceed to Phase 8 once the follow-up issue is triaged.
