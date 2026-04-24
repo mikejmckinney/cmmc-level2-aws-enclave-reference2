@@ -178,6 +178,42 @@ before you finish a unit" rule to `AGENTS.md` §"Work style" in
 `mikejmckinney/ai-repo-template`, and back it with an ADR explaining
 why the precondition is non-obvious enough to need explicit statement.
 
+### Additional generalizable lessons (added 2026-04-24, post-recovery)
+
+These were surfaced by the prior agent session that performed Phases 2–7
+but were not captured in the original postmortem. They generalize beyond
+this repo and should inform the template:
+
+1. **`awk -F,` does not honor quoted CSV cells** (universal). The original
+   [`scripts/check-ssp.sh`](../../scripts/check-ssp.sh) used `awk -F,`
+   and silently missed two of ten written controls (3.1.1, 3.13.1)
+   because their descriptions contain commas. Fixed by switching to a
+   Python `csv.DictReader` heredoc. **Template implication**: any future
+   shell guard over a CSV in any repo will hit this. Worth a one-line
+   warning in the template's CI authoring guidance (and a lint rule
+   that flags `awk -F,` over `*.csv`).
+2. **Cross-check guards belong in the same PR as the second generator**
+   (universal). When two artifacts share an invariant (here:
+   `controls/nist-800-171-mapping.csv` "full" rows ↔
+   [`ssp/SSP.md`](../../ssp/SSP.md) fully-written controls), the CI guard
+   enforcing alignment must land with the generator that creates the
+   dependency, not bolted on later. Without it, the two artifacts drifted
+   silently (CSV had 12 full rows; SSP had 10) until a manual audit
+   caught it. **Template implication**: add to the template's
+   PR-checklist guidance — "if your PR introduces a generator that
+   shares an invariant with another artifact, the cross-check guard
+   ships in the same PR."
+3. **[`test.sh`](../../test.sh) enforces exact markdown header casing**
+   (template-scope). It rejected `## Future improvements` and required
+   `## Future Improvements`. Cost a verification cycle. **Template
+   implication**: the template ships `test.sh`, so every derived repo
+   inherits this constraint. Either document the casing requirement in
+   the template's contributor guide or relax `test.sh`'s grep patterns
+   to be case-insensitive.
+
+These should fold into the same template-repo follow-up that captures
+the branch-precondition rule (see Action items).
+
 ## Action items
 
 - [ ] **Add branch/commit precondition to `AGENTS.md` §"Work style"** — owner: @mikejmckinney — issue: TBD (filed against `mikejmckinney/ai-repo-template`, not this repo)
@@ -186,6 +222,8 @@ why the precondition is non-obvious enough to need explicit statement.
 - [ ] **Decide whether to install pre-commit hook by default** that blocks direct commits to `main` — owner: @mikejmckinney — issue: TBD
 - [ ] **Consider local `pre-push` or status-check workflow that fires on session end** to detect uncommitted work — owner: @mikejmckinney — issue: TBD (lower priority; the rule + hook combo may be sufficient)
 - [ ] **Triage Phase 8 follow-up** (workload module library) — owner: @mikejmckinney — issue: filed in this repo by recovery session
+- [ ] **Add CSV/awk warning + cross-check-guard rule to template CI guidance** — owner: @mikejmckinney — issue: TBD (template repo); see "Additional generalizable lessons" 1 & 2
+- [ ] **Document or relax `test.sh` markdown header casing** — owner: @mikejmckinney — issue: TBD (template repo); see "Additional generalizable lessons" 3
 
 ## References
 
