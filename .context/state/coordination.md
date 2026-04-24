@@ -50,6 +50,23 @@ Every `task_*.md` file lives in exactly one of these states. Transitions are one
 
 ## Active Locks
 
+## Lock: pr-5
+<!-- managed-for-pr:5 -->
+**Role**: backend
+**Session**: fix/pr5-fips-and-csv-reconcile
+**Claimed At**: 2026-04-24T22:28:50Z
+**Expected Duration**: TBD
+**Paths**:
+- controls/nist-800-171-mapping.csv
+- scripts/check-ssp.sh
+- scripts/gen-controls-csv.py
+- terraform/modules/iam_baseline/main.tf
+- terraform/modules/iam_baseline/variables.tf
+- terraform/modules/iam_baseline/README.md
+**Depends On**: none
+**Blocks**: none
+**State**: in_progress
+
 ## Lock: pr1-fix-critical-and-trivial
 **Role**: devops
 **Session**: branch `fix/pr1-critical-and-trivial`

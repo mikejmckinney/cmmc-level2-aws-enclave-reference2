@@ -68,7 +68,7 @@ fi
 #   CSV none    → SSP TODO  | Not applicable        (rejects: Full, Implemented, Partial)
 # `Implemented` is accepted as a synonym for `Full` for backwards-compat with
 # the original SSP vocabulary; new entries should prefer `Full`.
-mismatches=$(python3 - <<'PY'
+mismatches=$(python3 - 2>&1 <<'PY'
 import csv, re, sys
 
 allowed = {
@@ -88,7 +88,8 @@ for line in ssp.splitlines():
         current = m.group(1)
         continue
     if current and line.startswith("**Implementation status:**"):
-        val = line.replace("**Implementation status:**", "").strip().rstrip("\\").strip()
+        m2 = re.match(r"^\*\*Implementation status:\*\*\s*([^\\]+?)\\?\s*$", line)
+        val = m2.group(1).strip() if m2 else line.replace("**Implementation status:**", "").strip().rstrip("\\").strip()
         ssp_status[current] = val
         current = None
 

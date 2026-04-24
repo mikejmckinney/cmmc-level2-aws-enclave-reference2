@@ -40,8 +40,8 @@ FAMILIES = {
 
 CONTROLS: list[tuple[str, str, str, str, str, str, str, str, str, str]] = [
     # ----- 3.1 Access Control (AC) — 22 -----
-    ("3.1.1", "AC", "Limit system access to authorized users", "Restrict logical access to authorized users, processes, and devices.", "full", "IAM;IAM Identity Center", "module.iam_baseline", "true", "false", "Repo provides password policy + Access Analyzer; client wires SSO and least-privilege roles. SSP-written."),
-    ("3.1.2", "AC", "Limit access to authorized transactions", "Restrict authorized transactions and functions for authorized users.", "full", "IAM", "module.iam_baseline", "true", "false", "DenyNonFipsEndpoints permission-boundary template provided. SSP-written."),
+    ("3.1.1", "AC", "Limit system access to authorized users", "Restrict logical access to authorized users, processes, and devices.", "partial", "IAM;IAM Identity Center", "module.iam_baseline", "true", "false", "Repo provides password policy + Access Analyzer; client wires SSO and least-privilege roles. SSP-written."),
+    ("3.1.2", "AC", "Limit access to authorized transactions", "Restrict authorized transactions and functions for authorized users.", "partial", "IAM", "module.iam_baseline", "true", "false", "DenyNonFipsEndpoints permission-boundary template provided. SSP-written."),
     ("3.1.3", "AC", "Control CUI flow", "Control approved authorizations for controlling CUI flow within the system.", "partial", "VPC;Security Groups;Network ACLs", "module.vpc", "true", "false", "Tiered subnets + endpoint SGs; client adds workload SGs / NACLs."),
     ("3.1.4", "AC", "Separation of duties", "Separate duties of individuals to reduce risk of malevolent activity.", "none", "IAM", "", "true", "true", "Organizational role design — outside Terraform."),
     ("3.1.5", "AC", "Least privilege", "Employ least privilege, including for specific security functions.", "partial", "IAM;IAM Access Analyzer", "module.iam_baseline", "true", "false", "Access Analyzer surfaces over-permissioned roles."),
@@ -81,7 +81,7 @@ CONTROLS: list[tuple[str, str, str, str, str, str, str, str, str, str]] = [
 
     # ----- 3.4 Configuration Management (CM) — 9 -----
     ("3.4.1", "CM", "Establish baseline configurations", "Establish and maintain baseline configurations and inventories.", "partial", "AWS Config;Systems Manager", "module.config", "true", "false", "Config recorder captures baselines; SSM Inventory for OS-level is client responsibility."),
-    ("3.4.2", "CM", "Establish security configuration settings", "Establish and enforce security configuration settings.", "full", "AWS Config;Conformance Packs", "module.config", "true", "false", "Optional NIST 800-171 conformance pack hook; client supplies YAML body. SSP-written."),
+    ("3.4.2", "CM", "Establish security configuration settings", "Establish and enforce security configuration settings.", "partial", "AWS Config;Conformance Packs", "module.config", "true", "false", "Optional NIST 800-171 conformance pack hook; client supplies YAML body. SSP-written."),
     ("3.4.3", "CM", "Track changes to systems", "Track, review, approve/disapprove, and audit changes.", "partial", "AWS Config;CloudTrail;Change Manager", "module.config;module.cloudtrail", "true", "false", "Repo captures change events; client owns CAB process."),
     ("3.4.4", "CM", "Analyze security impact of changes", "Analyze security impact of changes prior to implementation.", "none", "", "", "true", "true", "Change-management process."),
     ("3.4.5", "CM", "Restrict access for changes", "Define, document, approve, enforce physical and logical access restrictions for changes.", "none", "IAM;CodePipeline", "", "true", "false", "Implemented via CI/CD permission model."),
@@ -93,7 +93,7 @@ CONTROLS: list[tuple[str, str, str, str, str, str, str, str, str, str]] = [
     # ----- 3.5 Identification and Authentication (IA) — 11 -----
     ("3.5.1", "IA", "Identify users and devices", "Identify system users, processes, and devices.", "partial", "IAM;IAM Identity Center", "module.iam_baseline", "true", "false", "Named SSO users; client federates from IdP."),
     ("3.5.2", "IA", "Authenticate users and devices", "Authenticate the identities of users, processes, and devices.", "partial", "IAM Identity Center", "module.iam_baseline", "true", "false", "MFA enforced at IdP."),
-    ("3.5.3", "IA", "MFA for privileged accounts and network access", "Use multifactor authentication for privileged and network access for non-privileged accounts.", "full", "IAM Identity Center", "module.iam_baseline", "true", "false", "Repo readies the foundation; MFA enforced at IdP. SSP-written."),
+    ("3.5.3", "IA", "MFA for privileged accounts and network access", "Use multifactor authentication for privileged and network access for non-privileged accounts.", "partial", "IAM Identity Center", "module.iam_baseline", "true", "false", "Repo readies the foundation; MFA enforced at IdP. SSP-written."),
     ("3.5.4", "IA", "Replay-resistant authentication", "Employ replay-resistant authentication mechanisms.", "partial", "IAM Identity Center;TLS 1.2+", "module.iam_baseline", "true", "false", "AWS APIs use SigV4; IdP must enforce phishing-resistant MFA."),
     ("3.5.5", "IA", "Prevent identifier reuse", "Prevent reuse of identifiers for a defined period.", "none", "IAM Identity Center", "", "true", "false", "IdP / HR offboarding policy."),
     ("3.5.6", "IA", "Disable inactive identifiers", "Disable identifiers after a defined period of inactivity.", "none", "IAM Identity Center", "", "true", "false", "IdP automation."),
@@ -151,7 +151,7 @@ CONTROLS: list[tuple[str, str, str, str, str, str, str, str, str, str]] = [
     ("3.12.4", "CA", "Develop, document, and update SSPs", "Develop, document, and periodically update System Security Plans.", "partial", "", "", "true", "true", "Repo includes ssp/ skeleton; client maintains."),
 
     # ----- 3.13 System and Communications Protection (SC) — 16 -----
-    ("3.13.1", "SC", "Monitor and control communications at boundaries", "Monitor, control, and protect communications at external and key internal boundaries.", "full", "VPC;Network Firewall;Security Groups", "module.vpc", "true", "false", "Tiered subnets + endpoint SGs + flow logs; client adds AWS Network Firewall if needed. SSP-written."),
+    ("3.13.1", "SC", "Monitor and control communications at boundaries", "Monitor, control, and protect communications at external and key internal boundaries.", "partial", "VPC;Network Firewall;Security Groups", "module.vpc", "true", "false", "Tiered subnets + endpoint SGs + flow logs; client adds AWS Network Firewall if needed. SSP-written."),
     ("3.13.2", "SC", "Apply architecture and design principles for security", "Employ architectural designs and engineering principles that promote effective security.", "partial", "VPC;KMS;IAM", "module.vpc;module.kms;module.iam_baseline", "true", "false", "Reference architecture is the deliverable."),
     ("3.13.3", "SC", "Separate user functionality from system management", "Separate user functionality from system management functionality.", "partial", "IAM;VPC", "module.vpc", "true", "false", "Workload roles separate from admin roles."),
     ("3.13.4", "SC", "Prevent unauthorized information transfer via shared resources", "Prevent unauthorized and unintended information transfer via shared system resources.", "partial", "Dedicated Tenancy;KMS", "module.kms", "true", "false", "AWS Nitro provides hardware isolation; client picks tenancy."),

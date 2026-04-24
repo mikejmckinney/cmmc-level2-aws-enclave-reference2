@@ -30,6 +30,15 @@ resource "aws_accessanalyzer_analyzer" "account" {
 #   2. aws:SecureTransport = true (defense-in-depth: deny any plaintext call)
 #   3. s3:TlsVersion >= 1.2 (defense-in-depth on the S3 data plane)
 #
+# Note on StringNotEqualsIfExists: when aws:RequestedRegion is absent from
+# the request context (e.g. certain global-scope IAM/STS operations), the
+# IfExists variant evaluates to TRUE and the Deny fires — calls without a
+# region are blocked. This is intentional: GovCloud exposes all services
+# through regional endpoints, so any call that omits the region key should
+# be denied as unregionalized. If a future service or internal SDK call
+# requires passing without a region key, add a targeted Allow statement in
+# the workload role's identity policy (not here).
+#
 # Attach as a permission boundary on workload roles, or promote to an SCP
 # at the org level. Intentionally narrow: it does NOT enforce per-service
 # allow-lists — that is the workload role's job.
@@ -76,7 +85,7 @@ data "aws_iam_policy_document" "deny_non_fips" {
 resource "aws_iam_policy" "deny_non_fips" {
   count       = var.attach_deny_non_fips ? 1 : 0
   name        = "DenyNonFipsEndpoints"
-  description = "Restrict AWS API calls to FIPS-validated endpoints by (1) restricting aws:RequestedRegion to FIPS-by-default regions, (2) denying plaintext, (3) denying TLS<1.2. See module README for mechanism rationale."
+  description = "Restrict AWS API calls to FIPS-validated endpoints by (1) restricting aws:RequestedRegion to FIPS-by-default GovCloud regions, (2) denying plaintext transport, and (3) denying TLS<1.2 on S3. Calls lacking aws:RequestedRegion are also denied (StringNotEqualsIfExists semantics — intentional for GovCloud)."
   policy      = data.aws_iam_policy_document.deny_non_fips[0].json
   tags        = var.tags
 }
