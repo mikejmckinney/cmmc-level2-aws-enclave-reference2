@@ -25,10 +25,11 @@ for the bootstrap procedure.
 
 ## The Phase 2 deadline math
 
-CMMC 2.0 **Phase 2** begins **November 10, 2026** (per Greypike analysis
-— `TODO(citation): <Greypike report URL>`). At that point, **Level 2
-self-assessment** becomes a contract requirement for many DoD primes and
-their subcontractors handling CUI.
+CMMC 2.0 enters **Phase 2** on **November 10, 2026** (32 CFR Part 170
+implementation timeline; Final Rule effective December 16, 2024,
+published in the Federal Register on October 15, 2024 — 89 FR 83092).
+At that point, **Level 2 self-assessment** becomes a contract
+requirement for many DoD primes and their subcontractors handling CUI.
 
 Typical CMMC L2 remediation runs **6–12 months** end-to-end:
 
@@ -132,6 +133,18 @@ docs/           # FAQ, ADRs, demo-deploy guide, postmortems
 ├── prompts/    # Numbered prompt series used to build this repo
 └── workflows/  # terraform-ci, compliance-checks, demo-{plan,deploy,destroy}
 ```
+
+> **`terraform/demo/` is a minimal Lambda Function URL placeholder**, not
+> a faithful implementation of the architecture in
+> [`diagrams/network.md`](diagrams/network.md). The diagram shows the
+> intended production shape (ALB → ECS/Fargate → RDS/EFS/S3 across tiered
+> subnets); the demo deploys only the surrounding controls (CloudTrail,
+> Config, GuardDuty, KMS, VPC + endpoints, IAM baseline) plus a single
+> Lambda so the workload-tier wiring exists end-to-end without the cost
+> of a full app stack. A production enclave fork would replace the Lambda
+> with the ALB + ECS + RDS stack from the diagram. The demo also serves
+> a `Demo only — NOT a CUI enclave` disclaimer string from the Function
+> URL.
 
 ## For MSPs and consultants
 
