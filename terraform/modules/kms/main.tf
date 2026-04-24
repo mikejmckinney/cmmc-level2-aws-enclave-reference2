@@ -76,6 +76,15 @@ data "aws_iam_policy_document" "key" {
         type        = "Service"
         identifiers = each.value.service_principals
       }
+      # Scope service-principal usage to this account only. Without this,
+      # any account's CloudTrail/Config/CloudWatch Logs service could use
+      # the key if they discovered its ARN. aws:SourceAccount is the
+      # canonical scoping condition for service-principal grants.
+      condition {
+        test     = "StringEquals"
+        variable = "aws:SourceAccount"
+        values   = [data.aws_caller_identity.current.account_id]
+      }
     }
   }
 
