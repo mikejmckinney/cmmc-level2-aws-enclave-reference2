@@ -1,0 +1,13 @@
+# Rename to backend.tf and fill in real values to use a remote backend.
+# Optional for the demo — local state works fine for an ephemeral nightly
+# environment, and avoids cross-account bootstrap pain.
+
+terraform {
+  backend "s3" {
+    bucket       = "REPLACE-ME-tfstate-bucket"
+    key          = "cmmc-level2-aws-enclave-reference/demo/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

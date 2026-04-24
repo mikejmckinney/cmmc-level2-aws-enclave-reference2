@@ -1,0 +1,15 @@
+# Rename to backend.tf and fill in real values to use a remote backend.
+# Do NOT commit the populated backend.tf — it pins this root to a specific
+# account, which would defeat the purpose of a public reference repo.
+
+terraform {
+  backend "s3" {
+    bucket         = "REPLACE-ME-tfstate-bucket"
+    key            = "cmmc-level2-aws-enclave-reference/govcloud/terraform.tfstate"
+    region         = "us-gov-west-1"
+    encrypt        = true
+    kms_key_id     = "alias/REPLACE-ME-tfstate-kms"
+    dynamodb_table = "REPLACE-ME-tfstate-locks"
+    use_lockfile   = true
+  }
+}
