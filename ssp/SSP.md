@@ -74,8 +74,8 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 #### 3.1.2 — Limit access to authorized transactions
 **Implementation status:** Partial  
 **Responsible role:** Cloud Security Engineering  
-**Implementation:** *Repo provisions:* `module.iam_baseline` creates the customer-managed `DenyNonFipsEndpoints` policy, which contains two statements: (a) `DenyNonFipsEndpoints` blocks any AWS API call that uses a non-TLS transport (`aws:SecureTransport != true`), and (b) `DenyNonTLSv12` blocks S3 data-plane calls below TLS 1.2 (`s3:TlsVersion < 1.2`). *Client must configure:* attaching this policy as a permission boundary on workload roles (or promoting it to an SCP at the org level) and scoping each workload role to the specific actions and resources its function requires — the repo does not enumerate workload-specific permissions.  
-**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_policy.deny_non_fips`, statements `DenyNonFipsEndpoints` and `DenyNonTLSv12`); client-applied IAM permission boundary attachments per role; CloudTrail `AccessDenied` events when boundary fires.
+**Implementation:** *Repo provisions:* `module.iam_baseline` creates the customer-managed `DenyNonFipsEndpoints` policy, which contains two IAM statements: (a) the statement with SID `DenyNonFipsEndpoints` blocks any AWS API call that uses a non-TLS transport (`aws:SecureTransport != true`), and (b) the statement with SID `DenyNonTLSv12` blocks S3 data-plane calls below TLS 1.2 (`s3:TlsVersion < 1.2`). *Client must configure:* attaching this policy as a permission boundary on workload roles (or promoting it to an SCP at the org level) and scoping each workload role to the specific actions and resources its function requires — the repo does not enumerate workload-specific permissions.  
+**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_policy.deny_non_fips`, SIDs `DenyNonFipsEndpoints` and `DenyNonTLSv12`); client-applied IAM permission boundary attachments per role; CloudTrail `AccessDenied` events when boundary fires.
 
 #### 3.1.3 — Control CUI flow
 **Implementation status:** TODO
