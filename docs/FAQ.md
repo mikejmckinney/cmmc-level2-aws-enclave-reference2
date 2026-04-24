@@ -1,62 +1,66 @@
 # FAQ
 
-Frequently asked questions about the `ai-repo-template`. Answers link to deeper documentation where it already exists — this file is a navigator, not a duplicate.
+> Project FAQ for `cmmc-level2-aws-enclave-reference`. For agent-facing
+> instructions see [`AGENTS.md`](../AGENTS.md); for build commands see
+> [`AI_REPO_GUIDE.md`](../AI_REPO_GUIDE.md).
 
-> **For derived projects**: replace or extend this FAQ with questions specific to your project. Template-specific entries below (prefixed with "Template:") can be removed.
+## What is this repo?
 
----
+A reference architecture and partial Terraform implementation for a
+minimal CUI enclave in AWS GovCloud, aligned to CMMC 2.0 Level 2 / NIST
+SP 800-171 r2. It also ships a parallel deployable demo in commercial
+AWS so prospects and reviewers can poke at the architecture without
+GovCloud access.
 
-## Repo structure
+## Does this make my system CMMC-compliant?
 
-### Template: Why does this repo have `README.md`, `AGENTS.md`, `AI_REPO_GUIDE.md`, and `CLAUDE.md`?
+No. This repo is a starting point — a credible scaffold, a control
+mapping, and an SSP skeleton. CMMC compliance also requires
+organizational controls (training, IR plans, personnel screening,
+physical security), customer-specific Terraform work (workload modules,
+SSO wiring, route tables to TGW/DX, log forwarding), and a real
+assessment by a C3PAO. See [`README.md`](../README.md) → "What this repo
+does NOT give you".
 
-Each targets a different audience or loader:
+## Why GovCloud?
 
-- `README.md` — humans reading on GitHub.
-- `AGENTS.md` — root instructions most AI tools auto-load (Copilot, Cursor, Gemini).
-- `AI_REPO_GUIDE.md` — token-optimized agent reference.
-- `CLAUDE.md` — pointer file that Claude Code's native memory loader picks up; delegates to `AGENTS.md`.
+Most CUI workloads contractually require AWS GovCloud (US) due to
+data-residency, FIPS 140-2/3 endpoint, and FedRAMP High control-set
+requirements. The commercial demo exists only to showcase the *shape*
+of the architecture; it is not a CUI-suitable environment.
 
-Full rationale and a comparison table live in [`docs/guides/context-files-explained.md`](guides/context-files-explained.md) and [`docs/decisions/adr-001-context-pack-structure.md`](decisions/adr-001-context-pack-structure.md).
+## Can I deploy the demo to my own AWS account?
 
-### Template: Why is `CLAUDE.md` at the repo root and not inside `.claude/`?
+Yes. Once prompt 05 lands, `terraform/demo/` deploys to commercial AWS
+(`us-east-1` by default) with a one-command bring-up and tear-down. The
+deploy workflow added in prompt 09 uses GitHub Actions OIDC, not
+long-lived keys. Cost is bounded by a nightly auto-destroy schedule and
+a $25/month budget alarm.
 
-Both locations are valid — Claude Code auto-discovers either. Root is the `/init` default and keeps the file visible next to the other top-level docs. Moving it to `.claude/CLAUDE.md` is a preference, not a requirement. See the explanation inside [`CLAUDE.md`](../CLAUDE.md) itself.
+## Why not deploy the GovCloud root from CI?
 
-### Template: What's the difference between `docs/` and `.context/`?
+GovCloud accounts require US-person validation, separate billing, and
+manual onboarding. This repo's maintainer doesn't have one. The
+GovCloud root therefore stays `terraform validate`-clean only;
+deploying it is the consumer's job. See
+[`terraform/govcloud/README.md`](../terraform/govcloud/README.md) (added
+in prompt 04) for the bring-up procedure.
 
-- `docs/` — human-facing reference (guides, ADRs, research). Verbose, explanatory.
-- `.context/` — agent-facing canonical truth (rules, state, roadmap, vision). Lazy-loaded.
+## What about FedRAMP / IL4 / IL5?
 
-Decision record: [`docs/decisions/adr-001-context-pack-structure.md`](decisions/adr-001-context-pack-structure.md).
+Out of scope. CMMC L2 maps roughly to FedRAMP Moderate; this repo does
+not attempt to overlay FedRAMP-specific paperwork or the higher Impact
+Levels. Those would be separate projects.
 
-### Template: What's the difference between `.github/agents/` and `.claude/agents/`?
+## Why "Phase 2" deadline urgency?
 
-- `.github/agents/<role>.agent.md` — canonical role definitions. Read by GitHub Copilot's custom-agent runtime.
-- `.claude/agents/<role>.md` — Claude Code native subagent registration. Points back to the canonical file.
+CMMC 2.0 Phase 2 begins **November 10, 2026**. After that date, many DoD
+primes and subs need a Level 2 self-assessment to remain
+contract-eligible. Typical remediation timelines are 6–12 months.
+Anyone starting after mid-2026 is at material risk of contract impact.
+The full launch narrative (prompt 08) develops this in
+[`README.md`](../README.md).
 
-`test.sh` enforces that the `description:` frontmatter stays byte-identical between the two so both loaders dispatch on the same intent. Decision record: [`docs/decisions/adr-003-claude-code-subagent-registration.md`](decisions/adr-003-claude-code-subagent-registration.md).
+## Can I fork this and white-label it for my MSP practice?
 
----
-
-## Using the template
-
-### Do I have to use multi-agent roles, or can I work solo?
-
-Solo work is fine. The 10 roles (analyst, architect, judge, critic, pm, frontend, backend, qa, devops, docs) are helpful when multiple agents work in parallel without stepping on each other, but a single agent can wear any hat as needed. Full workflow: [`docs/guides/multi-agent-coordination.md`](guides/multi-agent-coordination.md).
-
-### How do I know whether I'm editing the template itself or a derived project?
-
-`AGENTS.md` has a template-detection block at the top. If the repo name is `ai-repo-template` (or the legacy `dotfiles`), the meta-docs are preserved. Otherwise, files containing `TEMPLATE_PLACEHOLDER` are treated as stubs to replace. See [`AGENTS.md`](../AGENTS.md) lines 3–12.
-
-### What does `TEMPLATE_PLACEHOLDER` mean and how do I find every instance?
-
-It's a marker used by this template to flag scaffolding that derived projects should replace. Run [`scripts/verify-env.sh`](../scripts/verify-env.sh) to check for the marker and report how many matches it finds.
-
-### Why are there deployment templates for Vercel, Railway, and Render — do I need all three?
-
-No. Pick one (or none). The templates in `config/` each have a `.template` suffix so nothing is active until you rename. See [`config/README.md`](../config/README.md) for the decision criteria per platform.
-
-### Template: Where should I file limitations or known issues I've hit?
-
-If it's an agent-facing gotcha, add it to `AI_REPO_GUIDE.md § Gotchas / Known Issues`. If it's human-facing, add it to `README.md § Limitations`. If it's a decision-specific follow-up, add it to the relevant ADR's "Future Work" subsection.
+Yes — Apache-2.0. Standard attribution rules apply. No warranty.

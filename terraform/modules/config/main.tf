@@ -1,0 +1,162 @@
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+
+locals {
+  bucket_name = "${var.name}-${data.aws_caller_identity.current.account_id}"
+}
+
+# -----------------------------------------------------------------------------
+# Delivery bucket.
+# -----------------------------------------------------------------------------
+resource "aws_s3_bucket" "delivery" {
+  bucket        = local.bucket_name
+  force_destroy = false
+  tags          = var.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "delivery" {
+  bucket                  = aws_s3_bucket.delivery.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "delivery" {
+  bucket = aws_s3_bucket.delivery.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "delivery" {
+  bucket = aws_s3_bucket.delivery.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = var.kms_key_arn
+    }
+    bucket_key_enabled = true
+  }
+}
+
+data "aws_iam_policy_document" "delivery" {
+  statement {
+    sid    = "AWSConfigBucketPermissionsCheck"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["config.amazonaws.com"]
+    }
+    actions   = ["s3:GetBucketAcl", "s3:ListBucket"]
+    resources = [aws_s3_bucket.delivery.arn]
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+
+  statement {
+    sid    = "AWSConfigBucketDelivery"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["config.amazonaws.com"]
+    }
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.delivery.arn}/AWSLogs/${data.aws_caller_identity.current.account_id}/Config/*"]
+    condition {
+      test     = "StringEquals"
+      variable = "s3:x-amz-acl"
+      values   = ["bucket-owner-full-control"]
+    }
+  }
+
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.delivery.arn, "${aws_s3_bucket.delivery.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "delivery" {
+  bucket = aws_s3_bucket.delivery.id
+  policy = data.aws_iam_policy_document.delivery.json
+}
+
+# -----------------------------------------------------------------------------
+# Service-linked role assumed by Config.
+# -----------------------------------------------------------------------------
+data "aws_iam_policy_document" "config_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["config.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "config" {
+  name               = "${var.name}-role"
+  assume_role_policy = data.aws_iam_policy_document.config_assume.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "config_managed" {
+  role       = aws_iam_role.config.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWS_ConfigRole"
+}
+
+# -----------------------------------------------------------------------------
+# Recorder + delivery channel.
+# -----------------------------------------------------------------------------
+resource "aws_config_configuration_recorder" "this" {
+  name     = var.name
+  role_arn = aws_iam_role.config.arn
+
+  recording_group {
+    all_supported                 = true
+    include_global_resource_types = var.include_global_resource_types
+  }
+}
+
+resource "aws_config_delivery_channel" "this" {
+  name           = var.name
+  s3_bucket_name = aws_s3_bucket.delivery.id
+
+  snapshot_delivery_properties {
+    delivery_frequency = var.delivery_frequency
+  }
+
+  depends_on = [aws_s3_bucket_policy.delivery]
+}
+
+resource "aws_config_configuration_recorder_status" "this" {
+  name       = aws_config_configuration_recorder.this.name
+  is_enabled = true
+  depends_on = [aws_config_delivery_channel.this]
+}
+
+# -----------------------------------------------------------------------------
+# Optional conformance pack — pass YAML body via var.conformance_pack_template_body.
+# -----------------------------------------------------------------------------
+resource "aws_config_conformance_pack" "nist_800_171" {
+  count         = var.conformance_pack_template_body == null ? 0 : 1
+  name          = "Operational-Best-Practices-for-NIST-800-171"
+  template_body = var.conformance_pack_template_body
+  depends_on    = [aws_config_configuration_recorder_status.this]
+}

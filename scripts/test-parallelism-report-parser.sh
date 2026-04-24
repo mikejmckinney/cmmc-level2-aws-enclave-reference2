@@ -215,7 +215,7 @@ if [[ -f "$LIVE_OWNERSHIP" ]]; then
   for anchor in \
       "Analyst	docs/research" \
       "Architect	docs/decisions" \
-      "Backend	src/api" \
+      "Backend	terraform/modules" \
       "DevOps	scripts" \
       "Docs	docs" \
       "PM	.context/state" \

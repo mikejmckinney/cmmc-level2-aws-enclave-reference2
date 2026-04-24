@@ -4,7 +4,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Discussions
-    # IMPORTANT: Update this URL to point to your repository's discussions page.
-    # Run ./scripts/setup.sh to auto-detect, or manually replace below.
-    url: https://github.com/PLEASE_UPDATE_THIS/URL/discussions
+    url: https://github.com/mikejmckinney/cmmc-level2-aws-enclave-reference2/discussions
     about: Use discussions for questions, ideas, and general conversation

@@ -39,12 +39,12 @@ Soft rules are targets. Judge does not block on them; Critic flags them as `CRAF
 ### S1 — Function Length
 Target: a function fits on one screen without scrolling. The exact line count is stack-specific — set a threshold in the "How to extend" block below. Rationale matters more than the count: if a longer function is genuinely more readable than its split form, keep it and say why in a comment.
 
-> Default threshold: `TEMPLATE_PLACEHOLDER` lines. (Suggested starting point: 40 for typed languages, 25 for dynamic languages.)
+> Default threshold: **50** lines. (Terraform/HCL resource blocks tend to be linear; 50 keeps modules readable without forcing premature extraction.)
 
 ### S2 — Complexity and Nesting
 Target: cyclomatic complexity and nesting depth stay low enough that a reader can hold the control flow in their head. When you feel yourself indenting a fourth level, extract.
 
-> Default thresholds: cyclomatic complexity `TEMPLATE_PLACEHOLDER`, max nesting depth `TEMPLATE_PLACEHOLDER`.
+> Default thresholds: cyclomatic complexity **10**, max nesting depth **3**.
 
 ### S3 — Names Describe Intent
 Names say **what the code is for**, not **how it works**. Prefer `calculateRenewalDate` over `addThirtyDays`. Avoid abbreviations unless the abbreviation is a term of art in your domain — and if it is, capture it in a glossary.
@@ -78,11 +78,9 @@ Many unit tests, fewer integration tests, minimal E2E tests. Concrete CI command
 
 ## How to Extend for Your Stack
 
-Downstream projects replace the `TEMPLATE_PLACEHOLDER` values and may add stack-specific rules. Keep extensions **additive** — do not delete Hard rules without an ADR.
+Downstream projects set the stack-specific thresholds and may add stack-specific rules. Keep extensions **additive** — do not delete Hard rules without an ADR.
 
 ```markdown
-<!-- TEMPLATE_PLACEHOLDER: paste your stack-specific thresholds -->
-
 ## Stack-Specific Overrides
 
 - S1 function length:     <N> lines (target), <N> lines (hard max)

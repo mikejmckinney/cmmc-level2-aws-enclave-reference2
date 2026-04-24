@@ -3,13 +3,10 @@ name: Backend
 description: Use to implement server code (APIs, models, migrations). Consumes a dispatched task; stays inside backend-owned paths.
 tools: ['read', 'write', 'search', 'fetch', 'githubRepo', 'usages']
 owned_paths:
-  # TEMPLATE_PLACEHOLDER: replace with your project's backend globs
-  - 'src/backend/**'
-  - 'src/api/**'
-  - 'src/server/**'
-  - 'src/models/**'
-  - 'migrations/**'
-  - 'db/**'
+  # This project's "backend" is its Terraform infrastructure code.
+  - 'terraform/modules/**'
+  - 'terraform/govcloud/**'
+  - 'terraform/demo/**'
 handoff_targets:
   - qa              # test coverage + integration review
   - judge           # diff-gate review before merge

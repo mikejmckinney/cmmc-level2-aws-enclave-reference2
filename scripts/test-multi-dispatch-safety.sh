@@ -143,7 +143,7 @@ make_issue 201 "title body" $'enhancement\nrole:backend\ncopilot:ready' "" "open
 mode=$(extract_scope 201 2>&1 >/dev/null)
 files=$(extract_scope 201 2>/dev/null)
 assert_contains "role-glob mode reported" "MODE: role-glob (role:backend)" "$mode"
-assert_contains "backend role glob includes src/backend" "src/backend" "$files"
+assert_contains "backend role glob includes terraform" "terraform/" "$files"
 
 # 3. Unknown role label → none + WARN.
 make_issue 202 "title" $'role:wizard' "" "open"
@@ -164,7 +164,7 @@ make_issue 204 "title" $'role:backend' "$NO_FENCE_COMMENT" "open"
 mode=$(extract_scope 204 2>&1 >/dev/null)
 files=$(extract_scope 204 2>/dev/null)
 assert_contains "marker without fence → role-glob fallback" "MODE: role-glob" "$mode"
-assert_contains "fallback returns backend prefixes" "src/backend" "$files"
+assert_contains "fallback returns backend prefixes" "terraform/" "$files"
 
 echo ""
 
@@ -188,8 +188,8 @@ B=$(mk_list "src/api/users.py" "src/api/billing.py")
 out=$(classify_overlap "$A" "$B")
 assert_eq "shared exact path → hard" "hard" "$out"
 
-C=$(mk_list "src/backend/x.py")
-D=$(mk_list "src/backend/y.py")
+C=$(mk_list "terraform/modules/vpc/main.tf")
+D=$(mk_list "terraform/modules/vpc/variables.tf")
 out=$(classify_overlap "$C" "$D")
 assert_eq "different files under same role prefix → soft" "soft" "$out"
 
@@ -270,8 +270,8 @@ out=$(select_dispatchable 350 351)
 assert_contains "same role label = identical scope → hard overlap" $'351\trefuse\thard overlap' "$out"
 
 # Scenario J: architect-distinct files within same role → both dispatched.
-ARCH_A=$'===COMMENT===\n<!-- architect-plan-files -->\n```\nsrc/backend/users.py\n```\n'
-ARCH_B=$'===COMMENT===\n<!-- architect-plan-files -->\n```\nsrc/backend/billing.py\n```\n'
+ARCH_A=$'===COMMENT===\n<!-- architect-plan-files -->\n```\nterraform/modules/vpc/main.tf\n```\n'
+ARCH_B=$'===COMMENT===\n<!-- architect-plan-files -->\n```\nterraform/modules/kms/main.tf\n```\n'
 make_issue 360 "users" "" "$ARCH_A" "open"
 make_issue 361 "billing" "" "$ARCH_B" "open"
 out=$(select_dispatchable 360 361)

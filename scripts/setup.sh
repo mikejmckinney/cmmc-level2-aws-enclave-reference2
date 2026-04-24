@@ -8,7 +8,8 @@
 # 3. Running database migrations (if applicable)
 # 4. Verifying the environment
 #
-# TEMPLATE_PLACEHOLDER: Customize this for your project
+# One-time bootstrap for this repo. Auto-detects the GitHub owner/repo and
+# rewrites .github/ISSUE_TEMPLATE/config.yml. Safe to re-run.
 
 set -e
 

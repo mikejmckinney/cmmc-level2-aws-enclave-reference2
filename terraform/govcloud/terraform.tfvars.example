@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and replace with real values for your deployment.
+# Values below are illustrative — they will not work as-is.
+
+region                      = "us-gov-west-1"
+environment                 = "prod"
+owner                       = "secops@example-msp.gov"
+vpc_cidr                    = "10.42.0.0/16"
+az_count                    = 3
+log_retention_days          = 365
+object_lock_retention_years = 7
+trail_name                  = "cmmc-prod-mgmt-trail"
+
+# Break-glass / admin principals allowed to administer CMKs.
+kms_admin_principal_arns = [
+  "arn:aws-us-gov:iam::111122223333:role/BreakGlassAdmin",
+]
+
+# Optional: NIST 800-171 conformance pack body.
+# config_conformance_pack_template_body = file("${path.module}/conformance/nist-800-171.yaml")

@@ -13,7 +13,7 @@ happened was Z." Without the second half, the same mistakes recur.
 
 | Postmortem | Title | Date | Generalizes? |
 |---|---|---|---|
-| _(none yet)_ | | | |
+| [postmortem-001](postmortem-001-workflow-bypass.md) | Workflow bypass on Phases 2–7 | 2026-04-24 | Yes |
 
 When you add a new postmortem, add a row above. The "Generalizes?" column is
 the only one that affects the template — see "What generalizes" below.

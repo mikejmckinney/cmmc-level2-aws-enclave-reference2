@@ -3,9 +3,14 @@ name: QA
 description: Use to write/update tests, gate merges on coverage, and triage CI failures. Runs after implementation, before judge diff-gate.
 tools: ['read', 'write', 'search', 'fetch', 'githubRepo', 'usages']
 owned_paths:
-  # TEMPLATE_PLACEHOLDER: replace with your project's test globs
+  # Tests in this project are: terraform validate/plan output assertions,
+  # the CSV/SSP/Mermaid guard scripts (added in prompt 10), and any tflint /
+  # checkov / tfsec rule overrides.
   - 'tests/**'
-  - 'e2e/**'
+  - 'scripts/check-controls-csv.py'
+  - 'scripts/check-ssp.sh'
+  - '.github/workflows/terraform-ci.yml'
+  - '.github/workflows/compliance-checks.yml'
   # Colocated test files (e.g. src/**/Component.test.tsx) are owned by the
   # role that owns the enclosing source path. See
   # .context/rules/agent_ownership.md -> "Colocated test files".

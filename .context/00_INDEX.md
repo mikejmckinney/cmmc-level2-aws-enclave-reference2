@@ -1,78 +1,71 @@
-<!-- TEMPLATE_PLACEHOLDER: Replace with actual project context index -->
-
 # Context Pack Index
 
-> **Purpose**: This is the entry point for AI agents to understand the project's direction, constraints, and current state.
+> **Purpose**: Entry point for AI agents to understand the project's
+> direction, constraints, and current state.
 
-## How to Use This Directory
+## Project
 
-The `.context/` directory contains **canonical project truth**.
+`cmmc-level2-aws-enclave-reference` — a reference architecture and partial
+Terraform implementation for a minimal **CUI enclave in AWS GovCloud**,
+aligned to **CMMC 2.0 Level 2 / NIST SP 800-171 r2**, plus a deployable
+commercial-AWS demo.
 
-### Priority Order (when conflicts arise)
+## Problem statement
 
-See `AGENTS.md` §"Truth hierarchy" for the canonical definition. Summary:
-`.context/**` > `docs/**` > codebase.
+CMMC 2.0 **Phase 2** begins **November 10, 2026**. Many DoD primes and
+subs will need a Level 2 self-assessment (NIST SP 800-171 r2 over CUI
+systems) to remain contract-eligible. Typical remediation timelines are
+6–12 months end-to-end. Most Defense Industrial Base orgs are
+under-prepared. This repo gives MSPs and DIBs a credible starting point:
+a pre-baked CUI enclave reference, a control-mapping spreadsheet, an SSP
+skeleton, and a clickable demo.
 
-## Directory Structure
+## Truth hierarchy
+
+`.context/**` > `docs/**` > codebase. This **priority order** is enforced
+when sources conflict; see [`AGENTS.md`](../AGENTS.md) §"Truth hierarchy"
+for the conflict-resolution procedure.
+
+## Key decisions
+
+- **Two parallel Terraform stacks** sharing one set of partition-aware
+  modules: `terraform/govcloud/` (validate-only, no GovCloud account here)
+  and `terraform/demo/` (deployable to commercial AWS).
+- **Apache-2.0** license; reference architecture, not legal advice.
+- **OIDC-only** demo deploys; no long-lived AWS keys committed.
+- **Compliance artifacts in sync**: the 110-control CSV and SSP skeleton
+  share IDs and are CI-gated against drift.
+- **Analyst pre-flight gate** applies to every numbered prompt
+  (`.github/prompts/NN-*.md`) before implementation.
+
+## Directory map
 
 ```
 .context/
-├── 00_INDEX.md          # This file - start here (The Map)
-├── backlog.yaml         # Machine-readable task list dispatched into issues
-├── backlog.schema.json  # JSON Schema for backlog.yaml
-├── roadmap.md           # Phase-by-phase plan with acceptance criteria (The Plan)
-├── rules/               # Immutable constraints and domain rules
-│   ├── agent_ownership.md    # Canonical role → owned paths map (read before editing)
-│   ├── domain_code_quality.md # Built-in language-neutral SOLID/TDD/clean-code floor
-│   └── domain_*.md           # Add your own stack-specific rules (e.g., domain_auth.md)
-├── sessions/            # Session history to prevent repeating mistakes
-│   └── latest_summary.md # Most recent session summary
-├── state/               # Task tracking (supports parallel work)
-│   ├── README.md        # How to create and manage tasks
-│   ├── _active.md       # Points to current priority task
-│   ├── coordination.md  # Live claim board for parallel multi-agent work
-│   ├── task_template.md # Copy this to create new tasks
-│   └── task_<id>.md     # Individual task files
-└── vision/              # Design artifacts (mockups, diagrams)
-    ├── mockups/         # UI/UX mockups and wireframes
-    └── architecture/    # System architecture diagrams (use Mermaid.js)
+├── 00_INDEX.md          # this file
+├── backlog.yaml         # machine-readable task list (not used in this project)
+├── roadmap.md           # phase-by-phase plan mirroring the prompt series
+├── rules/               # immutable constraints
+│   ├── agent_ownership.md      # canonical role → owned paths map
+│   ├── domain_code_quality.md  # SOLID/TDD/clean-code floor + Terraform thresholds
+│   └── README.md
+├── sessions/            # session history
+│   └── latest_summary.md
+├── state/               # active task tracking
+│   ├── coordination.md
+│   ├── feedback_template.md
+│   ├── task_template.md
+│   └── README.md
+└── vision/              # design artifacts (network diagram lives in /diagrams once prompt 02 runs)
+    └── README.md
 ```
 
-## Quick Start for Agents (Lazy Load Pattern)
+## Agent reading order
 
-1. Read this file first (The Map)
-2. Check `state/coordination.md` for live locks — confirm your intended paths aren't claimed by another role
-3. Read `rules/agent_ownership.md` to know which files your role may touch
-4. Check `state/_active.md` or `state/task_*.md` for current work
-5. Read `sessions/latest_summary.md` for what happened last session
-6. Read `roadmap.md` to understand project phases (The Plan)
-7. Reference `rules/` ONLY when making changes to those domains. `rules/domain_code_quality.md` is the built-in SOLID/TDD/clean-code floor — read it before any non-trivial refactor.
-8. Reference `vision/` for design guidance
-
-**Note:** Don't read everything at once. This index tells you what exists; load files on-demand to save tokens.
-
-**Multi-agent workflow**: See `docs/guides/multi-agent-coordination.md` for how role-specialized agents (Architect, Frontend, Backend, PM, QA, DevOps, Docs, Judge) coordinate in parallel without conflicts.
-
-**For full documentation on file purposes**, see `docs/guides/context-files-explained.md`.
-
-## Project Summary
-
-<!-- Replace this section with actual project summary -->
-
-**Project Name**: [TBD]  
-**Description**: [TBD]  
-**Current Phase**: [TBD]  
-**Tech Stack**: [TBD]
-
-## Key Decisions Log
-
-| Date | Decision | Rationale | Files Affected |
-|------|----------|-----------|----------------|
-| YYYY-MM-DD | Example decision | Why it was made | `path/to/file` |
-
-## Next Steps
-
-- [ ] Replace this placeholder with actual project context
-- [ ] Define roadmap phases
-- [ ] Add domain rules
-- [ ] Add initial design mockups if available
+1. [`AGENTS.md`](../AGENTS.md) — instructions, truth hierarchy, role selection
+2. [`AI_REPO_GUIDE.md`](../AI_REPO_GUIDE.md) — repo structure and commands
+3. This file
+4. [`roadmap.md`](roadmap.md) — what to build next
+5. [`rules/agent_ownership.md`](rules/agent_ownership.md) — what your role may edit
+6. [`state/coordination.md`](state/coordination.md) — what's locked right now
+7. [`.github/prompts/README.md`](../.github/prompts/README.md) — the prompt series

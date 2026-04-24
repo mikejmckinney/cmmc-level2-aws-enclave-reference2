@@ -1,0 +1,71 @@
+name: compliance-checks
+
+on:
+  pull_request:
+    paths:
+      - "controls/**"
+      - "ssp/**"
+      - "diagrams/**"
+      - "scripts/check-*.{py,sh}"
+      - "scripts/gen-*.py"
+      - ".github/workflows/compliance-checks.yml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mermaid-lint:
+    name: mermaid lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Render every Mermaid block in diagrams/
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mermaid-out
+          for f in diagrams/*.md; do
+            [ -f "$f" ] || continue
+            echo "Linting $f"
+            npx -y @mermaid-js/mermaid-cli@10 -i "$f" -o "/tmp/mermaid-out/$(basename "$f").svg"
+          done
+
+  csv-schema:
+    name: controls CSV schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+      - run: python3 scripts/check-controls-csv.py
+
+  ssp-todo-guard:
+    name: SSP TODO + sync guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-ssp.sh
+
+  csv-ssp-sync:
+    name: CSV ↔ SSP control-ID sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Diff control IDs
+        run: |
+          set -euo pipefail
+          tail -n +2 controls/nist-800-171-mapping.csv \
+            | awk -F, '{print $1}' | sort -u > /tmp/csv_ids.txt
+          grep -oE '^#### 3\.[0-9]+\.[0-9]+' ssp/SSP.md \
+            | awk '{print $2}' | sort -u > /tmp/ssp_ids.txt
+          if ! diff -u /tmp/csv_ids.txt /tmp/ssp_ids.txt; then
+            echo "::error::CSV control IDs differ from SSP headers"
+            exit 1
+          fi
+          echo "OK: $(wc -l < /tmp/csv_ids.txt) IDs match in both artifacts"

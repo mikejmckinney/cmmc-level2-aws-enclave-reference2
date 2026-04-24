@@ -1,4 +1,4 @@
-<!-- TEMPLATE_PLACEHOLDER: Copy this file to create a new feedback record -->
+<!-- Template: copy this file to create a new feedback record. -->
 <!-- Usage: cp .context/state/feedback_template.md .context/state/feedback_<iteration-or-feature>.md -->
 
 # Feedback: [Iteration/Feature Title]
