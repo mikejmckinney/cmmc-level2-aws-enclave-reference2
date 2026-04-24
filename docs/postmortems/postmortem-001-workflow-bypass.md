@@ -121,6 +121,63 @@ expectation lives only in someone's head, not in the rules. The
 template's whole premise is that rules in files survive context shifts;
 expectations in heads do not.
 
+### Second root cause: session-state cadence rule was *actively rationalized away*, not accidentally missed (added 2026-04-24)
+
+The agent that performed Phases 2–7 has since explained, in a separate
+session, *how* it skipped `_active.md` / `latest_summary.md` / handoff
+updates despite [`AGENTS.md`](../../AGENTS.md) §"Session-state cadence"
+being explicit about all three. This matters because the
+branch-precondition fix above doesn't address it: an agent that
+branched and committed nine times would still have skipped cadence
+nine times for these reasons. Each is a *separate* template-level gap.
+
+1. **Multiple prompts collapsed into a single "task."** The cadence rule
+   says "rewrite `_active.md` at every task boundary." The agent treated
+   prompts 02 → 10 as one continuous task instead of nine boundaries.
+   The rule fired nine times and was ignored each time. **Template
+   implication**: the rule needs to *name* what counts as a boundary
+   for the prompt-driven workflow specifically — e.g., "each
+   `.github/prompts/NN-*.md` file is a task boundary; rewrite
+   `_active.md` between prompts even if the same agent continues."
+2. **Agent-private surfaces substituted for checked-in state.** The
+   agent used the LLM tool's in-conversation todo list and
+   `/memories/session/plan.md` as working state. Both are invisible to
+   any other agent session. The agent *had* working state — it just
+   wasn't recoverable. **Template implication**: cadence rule needs an
+   explicit "working state must live in `.context/state/`; the in-tool
+   todo list and `/memories/session/` are scratch surfaces, not
+   substitutes." Without this, agents will reasonably reach for
+   whichever surface is most convenient.
+3. **Auto-summarization signal ignored.** The agent's session was
+   long enough that the LLM runtime auto-summarized the conversation
+   mid-flight. That is the loudest possible signal that the ~30-turn
+   handoff threshold was exceeded — and it was treated as routine.
+   **Template implication**: the handoff trigger shouldn't depend on
+   the agent voluntarily counting turns. Either (a) treat
+   auto-summarization as an explicit trigger ("if your context gets
+   summarized, write a handoff *before* responding to the next user
+   message"), or (b) move the handoff requirement to a checkable
+   surface (e.g., a script the agent must run that writes a handoff
+   stub).
+4. **Over-literal reading of "post-merge."** The `latest_summary.md`
+   close-out rule says "updated post-merge." The agent read this as
+   "not my job until merge happens" and deferred indefinitely.
+   **Template implication**: the wording is the bug. Replace
+   "post-merge" with "at session end *or* task close-out, whichever
+   comes first; if a merge hasn't happened yet, write the entry now
+   and amend later if the merge changes the outcome." The spirit of
+   the rule (leave the next session a baton) clearly applies at
+   session-end regardless of merge status.
+
+**Underlying pattern (the agent's own diagnosis):** "I optimized for the
+visible artifacts (Terraform, CSV, SSP, CI) and treated session-state
+hygiene as paperwork." This is the same anti-pattern the contributing
+factors above describe (friction-free path skips safety gates) but
+applied to *cadence* instead of *git*. Both git hygiene and
+session-state hygiene are invisible-when-correct, painful-when-missed
+work; both need explicit rules + cheap-to-execute mechanics, not just
+"do the right thing."
+
 ## Contributing factors
 
 1. **No `.gitignore`.** The repo shipped without one, so `terraform
@@ -224,6 +281,10 @@ the branch-precondition rule (see Action items).
 - [ ] **Triage Phase 8 follow-up** (workload module library) — owner: @mikejmckinney — issue: filed in this repo by recovery session
 - [ ] **Add CSV/awk warning + cross-check-guard rule to template CI guidance** — owner: @mikejmckinney — issue: TBD (template repo); see "Additional generalizable lessons" 1 & 2
 - [ ] **Document or relax `test.sh` markdown header casing** — owner: @mikejmckinney — issue: TBD (template repo); see "Additional generalizable lessons" 3
+- [ ] **Sharpen `AGENTS.md` §"Session-state cadence" — name the boundary explicitly for prompt-driven workflows** — owner: @mikejmckinney — issue: TBD (template repo); see "Second root cause" #1
+- [ ] **Add explicit "checked-in vs scratch surface" rule to cadence section** — owner: @mikejmckinney — issue: TBD (template repo); see "Second root cause" #2 (in-tool todo list and `/memories/session/` are scratch, not substitutes for `.context/state/`)
+- [ ] **Wire auto-summarization as an explicit handoff trigger** — owner: @mikejmckinney — issue: TBD (template repo); see "Second root cause" #3
+- [ ] **Replace "post-merge" wording in cadence rule** with "at session end or task close-out, whichever comes first" — owner: @mikejmckinney — issue: TBD (template repo); see "Second root cause" #4
 
 ## References
 
