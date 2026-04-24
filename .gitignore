@@ -1,0 +1,51 @@
+# --- Terraform ---
+# Local state, plans, crash logs, and provider plugin caches.
+# .terraform/ holds the provider binaries (~90MB) downloaded by `terraform init`
+# and must NEVER be committed.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# .terraform.lock.hcl IS committed intentionally (provider version pinning).
+# Do NOT add it here.
+
+# tfvars typically contain account IDs / regions that may be sensitive;
+# example files under terraform/**/terraform.tfvars.example ARE committed.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# --- Python (used by scripts/gen-*, check-*) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+
+# --- Node / misc ---
+node_modules/
+
+# --- Local agent / session scratch (NOT .context/state/, which is committed) ---
+*.local
+.env
+.env.*
+!.env.example
