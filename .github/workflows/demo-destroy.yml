@@ -1,0 +1,71 @@
+name: demo-destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DESTROY to confirm. Any other value aborts.'
+        required: true
+        type: string
+  schedule:
+    # 07:00 UTC nightly — bounds demo cost.
+    - cron: "0 7 * * *"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: demo-deploy
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: confirm gate (manual only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation token
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DESTROY" ]; then
+            echo "::error::confirm input must equal 'DESTROY' (got: '${{ github.event.inputs.confirm }}')"
+            exit 1
+          fi
+
+  destroy:
+    name: terraform destroy
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: [guard]
+    # `needs` only blocks if the job ran. For the schedule trigger, guard
+    # is skipped — `if: always()` lets destroy proceed when guard is skipped
+    # but blocks if guard ran and failed.
+    if: always() && (needs.guard.result == 'success' || needs.guard.result == 'skipped')
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Configure AWS credentials (deploy role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: gh-demo-destroy-${{ github.run_id }}
+
+      - name: terraform init
+        working-directory: terraform/demo
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.DEMO_STATE_BUCKET }}" \
+            -backend-config="key=cmmc-level2-aws-enclave-reference/demo/terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}"
+
+      - name: terraform destroy
+        working-directory: terraform/demo
+        run: terraform destroy -auto-approve
