@@ -25,12 +25,11 @@ for the bootstrap procedure.
 
 ## The Phase 2 deadline math
 
-CMMC 2.0 enters **Phase 2** approximately one year after the CMMC Final
-Rule effective date of **December 16, 2024** (DoD CMMC program office;
-see 32 CFR Part 170, published in the Federal Register on October 15,
-2024 — 89 FR 83092). At that point, **Level 2 self-assessment** becomes
-a contract requirement for many DoD primes and their subcontractors
-handling CUI.
+CMMC 2.0 enters **Phase 2** on **November 10, 2026** (32 CFR Part 170
+implementation timeline; Final Rule effective December 16, 2024,
+published in the Federal Register on October 15, 2024 — 89 FR 83092).
+At that point, **Level 2 self-assessment** becomes a contract
+requirement for many DoD primes and their subcontractors handling CUI.
 
 Typical CMMC L2 remediation runs **6–12 months** end-to-end:
 

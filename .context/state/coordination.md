@@ -50,6 +50,20 @@ Every `task_*.md` file lives in exactly one of these states. Transitions are one
 
 ## Active Locks
 
+## Lock: pr-6
+<!-- managed-for-pr:6 -->
+**Role**: architect
+**Session**: fix/pr6-doc-honesty
+**Claimed At**: 2026-04-24T22:32:55Z
+**Expected Duration**: TBD
+**Paths**:
+- .context/roadmap.md
+- README.md
+- ssp/SSP.md
+**Depends On**: none
+**Blocks**: none
+**State**: in_progress
+
 ## Lock: pr1-fix-critical-and-trivial
 **Role**: devops
 **Session**: branch `fix/pr1-critical-and-trivial`

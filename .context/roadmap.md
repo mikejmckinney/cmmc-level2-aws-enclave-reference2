@@ -87,7 +87,7 @@ intact.
 > The original work was performed directly in the working tree without
 > any branch/commit/PR; recovered in branch
 > `recovery/phases-1-7-uncommitted-work` and merged via PR #1. The
-> phases were never "shipped" in the conventional sense \u2014 they were
+> phases were never "shipped" in the conventional sense — they were
 > reconstructed from the working tree.
 
 ## Future / out-of-scope (not on this roadmap)
