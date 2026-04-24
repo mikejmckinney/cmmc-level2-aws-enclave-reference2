@@ -1,4 +1,7 @@
-# TEMPLATE_PLACEHOLDER: Customize for your project's build/test/lint commands
+# Generic CI shell from the template. The Terraform-specific CI for this
+# project (terraform-ci.yml + compliance-checks.yml) is added in
+# .github/prompts/10-ci-and-compliance-checks.md. This file currently runs
+# only the structural test.sh; replace or remove it once prompt 10 lands.
 #
 # Self-Healing CI Pipeline with Retry Budget
 # -------------------------------------------

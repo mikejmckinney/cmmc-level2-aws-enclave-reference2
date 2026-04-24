@@ -1,4 +1,4 @@
-<!-- TEMPLATE_PLACEHOLDER: Copy this file to create a new task -->
+<!-- Template: copy this file to create a new task record. -->
 <!-- Usage: cp task_template.md task_<your-task-id>.md -->
 
 # Task: [Title]

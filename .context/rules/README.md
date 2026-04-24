@@ -1,49 +1,27 @@
-<!-- TEMPLATE_PLACEHOLDER: Add domain rules here -->
+# Rules
 
-# Domain Rules
+> Immutable constraints for `cmmc-level2-aws-enclave-reference`. Architect
+> owns this directory (see
+> [`agent_ownership.md`](agent_ownership.md)). Add a new rule file here
+> when a constraint applies repo-wide; document deliberate exceptions
+> with an ADR under [`docs/decisions/`](../../docs/decisions/).
 
-> **Purpose**: This directory contains **immutable constraints** that must never be violated. Agents should check these rules before making changes.
+## Current rules
 
-## What Belongs Here
+| File | Owner | What it constrains |
+|---|---|---|
+| [`agent_ownership.md`](agent_ownership.md) | PM | Which role may edit which paths. Load-bearing for the multi-agent workflow. |
+| [`domain_code_quality.md`](domain_code_quality.md) | Architect | Hard rules H1–H8 (TDD, no silent error swallowing, etc.) and Soft rules S1–S6 with project-specific Terraform/HCL thresholds. |
 
-- Security requirements (e.g., "never log PII")
-- Architectural constraints (e.g., "all API calls go through the gateway")
-- Business rules (e.g., "users must verify email before posting")
-- Coding standards that are project-specific
+## Project-specific rule candidates (not yet written)
 
-## Naming Convention
+These would be worth adding once the corresponding code lands; track as
+follow-ups, not blockers:
 
-Files should be named `domain_<area>.md`:
-- `domain_auth.md` - Authentication/authorization rules
-- `domain_data.md` - Data handling constraints
-- `domain_api.md` - API design rules
-- `domain_testing.md` - Testing requirements
-
-## Example Rule File Structure
-
-```markdown
-# Domain: Authentication
-
-## Hard Rules (Never Violate)
-1. Passwords must be hashed with bcrypt (cost factor >= 12)
-2. JWTs expire after 15 minutes
-3. Refresh tokens stored in httpOnly cookies only
-
-## Soft Rules (Prefer Unless Justified)
-1. Prefer OAuth2 over custom auth
-2. Use established libraries over custom implementations
-
-## Rationale
-- [Why these rules exist]
-
-## Exceptions Process
-- If a rule must be violated, document in PR with security review
-```
-
-## Current Rules
-
-<!-- Add links to domain rule files as they're created -->
-
-- [`domain_code_quality.md`](./domain_code_quality.md) — built-in, language-neutral SOLID / TDD / clean-code floor. Architect-owned. Read before any non-trivial refactor; Judge blocks diff-gate on unjustified Hard-rule violations.
-
-Add further rules as `domain_<area>.md` (for example `domain_auth.md`, `domain_api.md`) following the naming convention above.
+- `domain_terraform.md` — required provider pins, required tags
+  (`Environment`, `DataClassification`, `Compliance`), required
+  `data.aws_partition.current` usage, ban on hardcoded region/account/ARN
+- `domain_compliance.md` — CSV/SSP sync invariants, control-ID format,
+  evidence-citation requirements for SSP "Implemented" entries
+- `domain_secrets.md` — explicit ban on long-lived AWS keys in workflows
+  or `terraform.tfvars` (OIDC-only)

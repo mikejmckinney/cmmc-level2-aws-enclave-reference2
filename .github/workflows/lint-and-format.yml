@@ -1,4 +1,7 @@
-# TEMPLATE_PLACEHOLDER: Customize for your project's linting/formatting tools
+# Generic lint shell from the template. Terraform fmt / tflint / checkov /
+# tfsec for this project are wired up in terraform-ci.yml (added in prompt
+# 10). Keep this workflow only if a non-Terraform linter (markdown, yaml,
+# shell) is later added.
 #
 # Lint and Format Workflow
 # ------------------------

@@ -1,4 +1,7 @@
-# TEMPLATE_PLACEHOLDER: Update BACKEND_URL for your project
+# Keep-warm pings a backend URL on a schedule to avoid cold-start latency.
+# This project has no always-on backend (the demo is brought up on demand and
+# torn down nightly), so this workflow is inert until a future workload
+# module needs it. Set the BACKEND_URL repo secret to enable.
 #
 # Keep Backend Warm
 # -----------------

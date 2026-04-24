@@ -33,13 +33,13 @@ this template for a new project:
 | Role       | Owned path globs                                                     | May also edit (with PM claim) |
 |------------|----------------------------------------------------------------------|-------------------------------|
 | Analyst    | `docs/research/**`                                                   | nothing (research-only)       |
-| Architect  | `AGENTS.md`, `docs/decisions/**`, `docs/postmortems/**`, `.context/roadmap.md`, `.context/vision/architecture/**`, `.context/rules/**` (except `agent_ownership.md`) | nothing (plan-only) |
-| Frontend   | `src/frontend/**`, `src/components/**`, `src/pages/**`, `src/styles/**`, `public/**`, colocated `*.test.*` / `*.spec.*` under those paths | UI-adjacent tests in `tests/ui/**` |
-| Backend    | `src/backend/**`, `src/api/**`, `src/server/**`, `src/models/**`, `migrations/**`, `db/**`, colocated `*.test.*` / `*.spec.*` under those paths | API-adjacent tests in `tests/api/**` |
+| Architect  | `AGENTS.md`, `docs/decisions/**`, `docs/postmortems/**`, `.context/roadmap.md`, `.context/vision/architecture/**`, `.context/rules/**` (except `agent_ownership.md`), `diagrams/**` | nothing (plan-only) |
+| Frontend   | (inactive in this project — no traditional frontend; see role file)  | nothing                       |
+| Backend    | `terraform/modules/**`, `terraform/govcloud/**`, `terraform/demo/**` | nothing                       |
 | PM         | `.context/state/**`, `.context/rules/agent_ownership.md`            | nothing (dispatch-only)       |
-| QA         | `tests/**`, `e2e/**`                                                 | nothing                       |
-| DevOps     | .github/workflows/**, config/**, install.sh, test.sh, scripts/**, .pre-commit-config.yaml.template, .cursorignore | nothing                       |
-| Docs       | README.md, AI_REPO_GUIDE.md, CLAUDE.md, AGENT.md, docs/** (except docs/decisions/**, docs/postmortems/**, docs/research/**)  | nothing                       |
+| QA         | `tests/**`, `scripts/check-controls-csv.py`, `scripts/check-ssp.sh`, `.github/workflows/terraform-ci.yml`, `.github/workflows/compliance-checks.yml` | nothing |
+| DevOps     | `.github/workflows/**` (except QA-owned), `config/**`, `install.sh`, `test.sh`, `scripts/**` (except QA-owned), `.pre-commit-config.yaml.template`, `.cursorignore` | nothing |
+| Docs       | `README.md`, `AI_REPO_GUIDE.md`, `CLAUDE.md`, `AGENT.md`, `controls/**`, `ssp/**`, `docs/**` (except `docs/decisions/**`, `docs/postmortems/**`, `docs/research/**`) | nothing |
 | Judge      | nothing (review-only, `.github/agents/judge.agent.md`)               | nothing                       |
 | Critic     | nothing (review-only, `.github/agents/critic.agent.md`)              | nothing                       |
 

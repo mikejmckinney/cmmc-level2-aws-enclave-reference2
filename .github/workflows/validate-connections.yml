@@ -1,4 +1,7 @@
-# TEMPLATE_PLACEHOLDER: Update URLs and add database connection test for your project
+# Connection-validation workflow from the template. Not applicable to this
+# project: there are no external services or databases to ping outside the
+# demo deploy (which has its own workflows added in prompt 09). Inert by
+# default; remove if not needed after prompt 09 lands.
 #
 # Connection Validation
 # ---------------------

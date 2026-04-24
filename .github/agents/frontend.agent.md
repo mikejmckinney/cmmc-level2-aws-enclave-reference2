@@ -3,7 +3,11 @@ name: Frontend
 description: Use to implement UI code (components, pages, styles). Consumes a dispatched task; stays inside frontend-owned paths.
 tools: ['read', 'write', 'search', 'fetch', 'githubRepo', 'usages']
 owned_paths:
-  # TEMPLATE_PLACEHOLDER: replace with your project's frontend globs
+  # This project has no traditional frontend; the demo workload (prompt 05)
+  # serves a single static disclaimer page authored as part of terraform/demo/.
+  # The Frontend role is therefore inactive in this repo. Kept for parity with
+  # the multi-agent governance model so future workload UIs (e.g., a
+  # control-status dashboard) can be claimed without re-introducing the role.
   - 'src/frontend/**'
   - 'src/components/**'
   - 'src/pages/**'

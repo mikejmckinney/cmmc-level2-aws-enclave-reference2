@@ -1,320 +1,149 @@
-<!-- TEMPLATE_PLACEHOLDER: This file must be regenerated for the actual project repo. -->
-<!-- Run .github/prompts/repo-onboarding.md to rebuild this guide from real repo assets. -->
-
 # AI_REPO_GUIDE.md
 
-> **Purpose**: Canonical reference for AI agents working with this template repository.  
-> **Last verified**: 2025-01-25
->
-> **Note**: This file is for agents. For human documentation, see `README.md`.
+> **Purpose**: Canonical reference for AI agents working with
+> `cmmc-level2-aws-enclave-reference`.
+> **Last verified**: 2026-04-24
 
-## Overview
+For human documentation, see [`README.md`](README.md). For agent
+instructions and the truth hierarchy, read [`AGENTS.md`](AGENTS.md) first.
 
-This is the **AI repo template** (`mikejmckinney/ai-repo-template`) for GitHub
-Codespaces and AI-assisted development. It plugs into the GitHub Codespaces
-"Dotfiles" feature (which runs an install script at Codespace startup) to
-bootstrap a multi-agent development kit. It is not a Unix dotfiles repo. It
-provides:
-- Pre-configured AI agent prompts for onboarding and code review
-- Context management structure for LLM memory across sessions
-- Automatic VS Code extension installation on Codespace startup
-- CI/CD workflow templates for self-healing pipelines
-- Standardized files that can be copied to new repositories
+## Project summary
 
-## Quick Start
+A reference architecture for a minimal CUI enclave in AWS GovCloud aligned
+to CMMC 2.0 Level 2 / NIST SP 800-171 r2, plus a deployable commercial-AWS
+demo. Ships:
 
-```bash
-# Verify template files
-./test.sh
+- Mermaid network diagram of the boundary, VPC, subnets, and access patterns
+- Six partition-aware Terraform modules (vpc, iam_baseline, kms,
+  cloudtrail, guardduty, config) consumed by both stacks
+- A GovCloud root that `terraform validate`s clean (not applied here — no
+  GovCloud account)
+- A commercial-AWS demo root that `terraform apply` deploys end-to-end
+  (cost-bounded, nightly auto-destroy)
+- 110-control NIST 800-171 → AWS mapping CSV
+- SSP markdown skeleton (10 controls fully written, 100 TODO stubs)
 
-# Manual install simulation (for testing)
-bash install.sh
-```
+## Where canonical truth lives
 
-## Repository Structure
+- [`AGENTS.md`](AGENTS.md) — agent instructions, truth hierarchy, role
+  selection, onboarding
+- [`.context/00_INDEX.md`](.context/00_INDEX.md) — project context entry
+  point (lazy-loads rules, state, roadmap, vision)
+- [`.context/rules/agent_ownership.md`](.context/rules/agent_ownership.md)
+  — which role may edit which paths
+- [`.context/roadmap.md`](.context/roadmap.md) — phase plan mirroring the
+  prompt series
+- [`.github/prompts/README.md`](.github/prompts/README.md) — numbered
+  prompt series and execution order
+
+## Repository layout
 
 ```
 /
-├── AI_REPO_GUIDE.md          # This file - canonical AI reference
-├── AGENTS.md                 # Root agent instructions (always read first)
-├── AGENT.md                  # Deprecated redirect to AGENTS.md
-├── CLAUDE.md                 # Claude Code native memory pointer to AGENTS.md
-├── README.md                 # User-facing documentation
-├── install.sh                # Codespace bootstrap script
-├── test.sh                   # Verification script
+├── AGENTS.md                 # agent instructions (read first)
+├── AI_REPO_GUIDE.md          # this file
+├── CLAUDE.md                 # Claude Code memory pointer to AGENTS.md
+├── README.md                 # project stub (full version in prompt 08)
+├── LICENSE                   # Apache-2.0
+├── install.sh                # Codespace bootstrap (template-provided)
+├── test.sh                   # template structural verification
 │
-├── .context/                 # Project context (canonical truth)
-│   ├── 00_INDEX.md           # Context entry point
-│   ├── backlog.yaml          # Machine-readable task list (dispatched into issues)
-│   ├── backlog.schema.json   # JSON Schema for backlog.yaml
-│   ├── roadmap.md            # Phase-by-phase plan
-│   ├── rules/                # Immutable domain constraints
-│   │   ├── README.md
-│   │   ├── agent_ownership.md
-│   │   ├── domain_code_quality.md
-│   │   └── process_doc_maintenance.md
-│   ├── sessions/             # Session history for handoff
-│   │   ├── README.md
-│   │   └── latest_summary.md
-│   ├── state/                # Task tracking (supports parallel work)
-│   │   ├── README.md
-│   │   ├── _active.md            # Current priority task pointer
-│   │   ├── coordination.md       # Live claim board
-│   │   ├── feedback_template.md  # Stakeholder feedback template
-│   │   ├── handoff_template.md   # Cross-session/role handoff template
-│   │   ├── task_template.md      # Template for new tasks
-│   │   └── task_*.md             # Individual task files
-│   └── vision/               # Design artifacts
-│       ├── README.md
-│       ├── mockups/          # UI/UX mockups
-│       └── architecture/     # System diagrams
+├── .context/                 # canonical project truth
+│   ├── 00_INDEX.md
+│   ├── backlog.yaml
+│   ├── roadmap.md            # phase plan
+│   ├── rules/                # immutable constraints (agent_ownership, code quality)
+│   ├── sessions/             # session summaries
+│   ├── state/                # active-task tracking
+│   └── vision/               # design artifacts (diagrams live here too)
 │
-├── docs/                     # Human reference documentation
-│   ├── README.md             # Documentation index
-│   ├── FAQ.md                # Common questions
-│   ├── smoke-a.md            # Smoke test scenario A
-│   ├── smoke-e.md            # Smoke test scenario E
-│   ├── decisions/            # Architecture Decision Records (adr-001 … adr-010, adr-template)
-│   ├── guides/               # How-to guides (agent-best-practices, agent-pipeline, context-files-explained, multi-agent-coordination, optional-skills)
-│   ├── postmortems/          # Postmortems (template + project-specific)
-│   ├── reference/            # Specs, external docs
-│   └── research/             # Analyst output (analysis artifacts)
+├── .github/
+│   ├── agents/               # role agent files (Analyst, Architect, …, DevOps, Docs)
+│   ├── ISSUE_TEMPLATE/
+│   ├── prompts/              # numbered prompt series + shared procedural prompts
+│   └── workflows/            # CI (terraform-ci, compliance-checks, demo-*)
 │
-├── scripts/                  # Bootstrap + verification scripts
-│   ├── README.md
-│   ├── setup.sh              # First-run project customization
-│   ├── verify-env.sh         # Environment & placeholder sanity check
-│   ├── db-reset.sh           # Optional DB reset stub
-│   ├── auto-rebase-overlapping.sh    # Auto-rebase library (ADR-010)
-│   ├── multi-dispatch-safety.sh      # Parallel-dispatch safety classifier
-│   ├── parse-ownership-table.sh      # Ownership-table parser used by workflows
-│   └── test-*.sh             # Unit tests for the helper scripts above
+├── terraform/                # added in prompts 03–05
+│   ├── modules/              # vpc, iam_baseline, kms, cloudtrail, guardduty, config
+│   ├── govcloud/             # GovCloud reference root (validate-clean)
+│   └── demo/                 # commercial-AWS deployable demo
 │
-├── config/                   # Deployment config templates (see table below)
-│
-├── .claude/
-│   └── agents/               # Claude Code subagent registry (10 mirrors of .github/agents/, see ADR-003)
-├── .cursor/
-│   └── BUGBOT.md             # Cursor Bugbot PR review rules
-├── .gemini/
-│   └── styleguide.md         # Gemini Code Assist review style
-├── .pre-commit-config.yaml.template  # Pre-commit hooks template
-├── .cursorignore             # Files Cursor should not index
-└── .github/
-    ├── copilot-instructions.md   # GitHub Copilot instructions (auto-read)
-    ├── pull_request_template.md  # Default PR body skeleton (Doc-sync checklist required)
-    ├── agents/                   # 10 role-specialized agent files
-    │   ├── analyst.agent.md, architect.agent.md, critic.agent.md,
-    │   ├── judge.agent.md, pm.agent.md, frontend.agent.md,
-    │   ├── backend.agent.md, qa.agent.md, devops.agent.md,
-    │   └── docs.agent.md
-    ├── prompts/
-    │   ├── README.md             # Prompt catalog
-    │   ├── copilot-onboarding.md # Guide for customizing copilot-instructions.md
-    │   ├── repo-onboarding.md    # Repo onboarding workflow prompt
-    │   ├── pr-resolve-all.md     # PR-review resolution procedure
-    │   └── expand-backlog-entry.md # Backlog → issue expansion prompt
-    ├── ISSUE_TEMPLATE/           # bug_report, feature_request, agent_init, config.yml
-    └── workflows/
-        ├── ci-tests.yml
-        ├── claude.yml
-        ├── keep-warm.yml
-        ├── lint-and-format.yml
-        ├── validate-connections.yml
-        ├── agent-assign-copilot.yml
-        ├── agent-auto-merge.yml
-        ├── agent-auto-ready.yml
-        ├── agent-coordination-sync.yml
-        ├── agent-fix-reviews.yml
-        ├── agent-multi-dispatch.yml
-        ├── agent-parallelism-report.yml
-        ├── agent-relay-reviews.yml
-        ├── agent-release-slot.yml
-        ├── auto-rebase-on-merge.yml
-        ├── backlog-to-issues.yml
-        └── agent-heartbeat.yml.template
+├── controls/                 # added in prompt 06 (NIST 800-171 mapping CSV)
+├── ssp/                      # added in prompt 07 (SSP skeleton)
+├── diagrams/                 # added in prompt 02 (Mermaid network diagram)
+├── docs/                     # FAQ, ADRs, postmortems, guides
+└── scripts/                  # setup, verify, dispatch helpers
 ```
 
-## Key Files by Purpose
+## Repo conventions
 
-### Agent Instructions (read by AI assistants automatically)
-| File | Tool/Platform | Purpose |
-|------|--------------|---------|
-| `AGENTS.md` | Most AI tools | Root instructions, points to this file |
-| `CLAUDE.md` | Claude Code | Native memory-file pointer to AGENTS.md |
-| `.github/copilot-instructions.md` | GitHub Copilot | Copilot-specific instructions |
-| `.cursor/BUGBOT.md` | Cursor Bugbot | PR review rules |
-| `.gemini/styleguide.md` | Gemini Code Assist | PR review style guide |
-| `.github/agents/judge.agent.md` | Multi-tool | Procedural plan/diff gate reviewer (no code) |
-| `.github/agents/critic.agent.md` | Multi-tool | Devil's Advocate — subjective quality review (no code) |
-| `.github/agents/architect.agent.md` | Multi-tool | Plan + ADR author (no code) |
-| `.github/agents/analyst.agent.md` | Multi-tool | Needs analysis, market research, problem validation (no code) |
-| `.github/agents/pm.agent.md` | Multi-tool | Task dispatcher + ownership enforcer (no code) |
-| `.github/agents/frontend.agent.md` | Multi-tool | UI layer implementer |
-| `.github/agents/backend.agent.md` | Multi-tool | Server layer implementer |
-| `.github/agents/qa.agent.md` | Multi-tool | Test author + CI gate |
-| `.github/agents/devops.agent.md` | Multi-tool | Workflows, configs, install scripts |
-| `.github/agents/docs.agent.md` | Multi-tool | README, AI_REPO_GUIDE.md, guides |
+- **Truth hierarchy**: `.context/**` > `docs/**` > codebase. Conflicts are
+  resolved by the higher-priority source; the lower one gets a follow-up
+  fix in the same PR.
+- **Multi-agent workflow**: roles (Analyst, Architect, PM, Backend, QA,
+  DevOps, Docs, Judge, Critic) are defined under `.github/agents/`. See
+  [`docs/guides/multi-agent-coordination.md`](docs/guides/multi-agent-coordination.md).
+- **Path ownership**: every file is owned by exactly one role per
+  [`.context/rules/agent_ownership.md`](.context/rules/agent_ownership.md).
+  Cross-role edits require a PM claim.
+- **Analyst pre-flight gate**: any issue referencing a numbered prompt
+  (`.github/prompts/NN-*.md`) must have a passing Pre-Flight Report
+  before implementation begins. See [`AGENTS.md`](AGENTS.md) → "Analyst
+  pre-flight gate".
+- **Terraform conventions** (once `terraform/` lands): partition-aware via
+  `data.aws_partition.current` (no hardcoded `arn:aws:` strings); pinned
+  `terraform >= 1.6`, `aws >= 5.40`; `terraform fmt -recursive` clean.
+- **Compliance artifacts must stay in sync**: the CSV (`controls/`) and
+  SSP (`ssp/SSP.md`) reference the same 110 control IDs; CI guard in
+  prompt 10 enforces this.
 
-### Context Pack (project memory)
-| File | Purpose |
-|------|---------|
-| `.context/00_INDEX.md` | Entry point, project summary |
-| `.context/backlog.yaml` | Machine-readable task list. Planned for dispatch into issues by `.github/workflows/backlog-to-issues.yml` once that workflow lands (added in PR 3 of the backlog-pipeline series). Validate with `pip install check-jsonschema && check-jsonschema --schemafile .context/backlog.schema.json .context/backlog.yaml` |
-| `.context/backlog.schema.json` | JSON Schema for `backlog.yaml` (Draft-07) |
-| `.context/roadmap.md` | Phase-by-phase plan |
-| `.context/rules/` | Domain constraints (never violate) |
-| `.context/rules/agent_ownership.md` | Canonical role → owned paths map for multi-agent work |
-| `.context/rules/domain_code_quality.md` | Built-in language-neutral SOLID/TDD/clean-code floor |
-| `.context/rules/process_doc_maintenance.md` | Doc-sync triggers (which companion files must update together); enforced by Judge at diff-gate |
-| `.context/state/coordination.md` | Live claim board for parallel multi-agent work |
-| `.context/state/feedback_template.md` | Stakeholder feedback capture template |
-| `.context/state/handoff_template.md` | Cross-session/cross-role handoff template (used at ~30 turns or before role swap) |
-| `.context/state/task_*.md` | Current task(s) for session handoff |
-| `.context/vision/` | Mockups and architecture diagrams |
-
-### Prompts (user-triggered, not auto-loaded)
-| File | Purpose |
-|------|---------|
-| `.github/prompts/copilot-onboarding.md` | Guide for customizing copilot-instructions.md |
-| `.github/prompts/repo-onboarding.md` | Repo onboarding workflow prompt |
-
-### Setup Scripts
-| File | Purpose |
-|------|---------|
-| `install.sh` | Runs on Codespace start; installs extensions, copies prompts |
-| `test.sh` | Verifies template integrity (see Verification Commands below for live check count) |
-| `scripts/setup.sh` | First-run project customization helper |
-| `scripts/verify-env.sh` | Environment & placeholder sanity check |
-| `scripts/db-reset.sh` | Optional database reset stub |
-
-### Issue Templates
-| File | Purpose |
-|------|---------|
-| `.github/ISSUE_TEMPLATE/bug_report.md` | Structured bug reports |
-| `.github/ISSUE_TEMPLATE/feature_request.md` | Feature requests with acceptance criteria |
-| `.github/ISSUE_TEMPLATE/agent_init.md` | Initialize repo from template |
-| `.github/ISSUE_TEMPLATE/config.yml` | Chooser config (rewritten by `scripts/setup.sh`) |
-
-### Deployment Configs
-| File | Platform | Purpose |
-|------|----------|---------|
-| `config/vercel.json.template` | Vercel | Frontend, serverless |
-| `config/railway.toml.template` | Railway | Backend services |
-| `config/render.yaml.template` | Render | Full-stack blueprint |
-| `config/docker-compose.yml.template` | Docker Compose | Local dev stack |
-
-### Development Tools
-| File | Purpose |
-|------|---------|
-| `.pre-commit-config.yaml.template` | Pre-commit hooks (linting, secrets) |
-| `docs/decisions/README.md` | ADR index, supersession discipline, what a well-documented ADR looks like |
-| `docs/decisions/adr-template.md` | Architecture Decision Record template (with "When to write" header) |
-| `docs/postmortems/README.md` | Postmortem index, when to write, ADR-vs-postmortem split, "What generalizes" promotion gate |
-| `docs/postmortems/postmortem-template.md` | Postmortem / lessons-learned template (Trigger, Expected vs Actual, Root cause, What generalizes, Action items) |
-| `.github/pull_request_template.md` | PR template with required doc-sync checklist |
-| `docs/guides/agent-best-practices.md` | Token limits, session handoff, secrets, prompt caching, issue/PR granularity |
-| `docs/guides/multi-agent-coordination.md` | Parallel role-based workflow (Analyst/Architect/FE/BE/PM/QA/DevOps/Docs/Judge/Critic) |
-| `docs/guides/optional-skills.md` | Optional external Claude Code skills (SOLID, everything-claude-code) |
-| `.github/workflows/agent-heartbeat.yml.template` | Optional scheduled workflow to surface stale locks / stuck tasks |
-
-### CI/CD Workflows
-| File | Purpose |
-|------|---------|
-| `ci-tests.yml` | Build, lint, test pipeline (customize for project) |
-| `lint-and-format.yml` | Markdown + script lint/format pass |
-| `keep-warm.yml` | Prevents free-tier backend suspension |
-| `validate-connections.yml` | Daily backend/DB connectivity check |
-| `claude.yml` | Claude Code triggers (`@claude` mention + auto-review on PR open) |
-| `agent-assign-copilot.yml` | Gated Copilot PR assignment for `copilot:ready` issues |
-| `agent-auto-merge.yml` | Opt-in auto-merge via `auto-merge` label (CI green + threads resolved) |
-| `agent-auto-ready.yml` | Marks Copilot PRs ready for review when implementation completes |
-| `agent-coordination-sync.yml` | Reconciles `.context/state/coordination.md` with live PR/issue state |
-| `agent-fix-reviews.yml` | Triggers Claude to run `pr-resolve-all.md` on review feedback |
-| `agent-multi-dispatch.yml` | Parallel Copilot fan-out with overlap-safety classifier |
-| `agent-parallelism-report.yml` | Cross-PR overlap classifier; posts a comment on every open PR |
-| `agent-relay-reviews.yml` | Relays bot review comments to Copilot via `@copilot follow` |
-| `agent-release-slot.yml` | Releases Copilot slot + drains queue on PR close |
-| `auto-rebase-on-merge.yml` | Opt-in auto-rebase of overlapping PRs via `auto-rebase` label |
-| `backlog-to-issues.yml` | Materializes `.context/backlog.yaml` entries as GitHub issues |
-| `agent-heartbeat.yml.template` | Optional scheduled workflow to surface stale locks |
-
-## Truth Hierarchy
-
-See `AGENTS.md` §"Truth hierarchy" for the canonical definition. Summary:
-`.context/**` > `docs/**` > codebase.
-
-## Conventions
-
-### File Naming
-- Agent instruction files: `AGENTS.md`, `*.agent.md`, or tool-specific paths
-- Prompts: `*.prompt.md` or in `.github/prompts/`
-- Style guides: `styleguide.md` in tool-specific directories
-- Context files: Use clear names, prefer `.md` extension
-
-### Content Guidelines
-- Keep instructions concise (aim for < 2 pages per file)
-- Include verification commands where applicable
-- Use structured output formats (checklists, tables)
-- Reference this file (`AI_REPO_GUIDE.md`) for canonical commands
-
-### Testing Requirements
-- Follow test pyramid: many unit tests, fewer integration tests, minimal E2E
-- Write tests before or alongside implementation (TDD preferred)
-- All behavioral changes must include tests
-- CI must pass before tasks are marked complete
-
-## Verification Commands
+## Build / test / lint commands
 
 ```bash
-# Check all required files exist
+# Template / repo structural verification
 ./test.sh
 
-# Validate shell scripts (if shellcheck installed)
-shellcheck install.sh test.sh
+# Terraform (both roots)
+terraform fmt -recursive -check terraform/
+terraform -chdir=terraform/govcloud init -backend=false && terraform -chdir=terraform/govcloud validate
+terraform -chdir=terraform/demo    init -backend=false && terraform -chdir=terraform/demo    validate
 
-# List all markdown files
-find . -name "*.md" -not -path "./.git/*" | head -20
-
-# Verify context pack structure
-ls -la .context/
-
-# Verify config templates
-ls -la config/
+# Compliance guards
+python3 scripts/check-controls-csv.py   # 110 rows, 14 families, addressed_by_repo tally
+bash    scripts/check-ssp.sh            # 110 headers, 100 TODO stubs, 10 written
 ```
 
-## Using This Template
+## CI and verification
 
-### For new repositories
-1. Create repo from this template (or copy files)
-2. Replace all files containing `TEMPLATE_PLACEHOLDER`
-3. Fill in `.context/00_INDEX.md` with project details
-4. Define roadmap in `.context/roadmap.md`
-5. Customize `ci-tests.yml` for your tech stack
+Workflows live in [`.github/workflows/`](.github/workflows/):
 
-### For Codespaces
-1. Link this repo in GitHub Codespaces settings
-2. Extensions install automatically via `install.sh`
-3. AI prompts copied to workspace
+| Workflow | Trigger | Purpose |
+| --- | --- | --- |
+| `terraform-ci.yml` | PR + push to `main` | `fmt -check`, matrix `init/validate/tflint/checkov/tfsec` for `govcloud` and `demo` roots. |
+| `compliance-checks.yml` | PR + push to `main` | Mermaid lint, CSV schema (`controls/schema.json`), SSP TODO-count guard, CSV↔SSP sync (every `full` row has a written section). |
+| `demo-plan.yml` | PR touching `terraform/demo/**` | Read-only OIDC plan against the demo account; posts plan summary as a PR comment. |
+| `demo-deploy.yml` | `workflow_dispatch` (typed `DEPLOY`, `main` only) | Applies `terraform/demo`; smoke-tests the Function URL for the "NOT A CUI ENCLAVE" disclaimer string. |
+| `demo-destroy.yml` | `workflow_dispatch` (typed `DESTROY`) + nightly cron `0 7 * * *` | Tears down the shared demo. Concurrency-grouped with deploy. |
 
-### First-time repo initialization
-See the "Easiest way to initialize new repo" prompt in the main README or create an issue with instructions for the agent.
+Local equivalents of CI guards:
 
-## Gotchas / Known Issues
+- `terraform fmt -recursive -check terraform/`
+- `terraform -chdir=terraform/<root> validate`
+- `python3 scripts/check-controls-csv.py`
+- `bash scripts/check-ssp.sh`
+- `./test.sh` (template structural checks; do not weaken)
 
-- `install.sh` reads the `$DOTFILES` environment variable (set automatically by
-  the GitHub Codespaces "Dotfiles" feature when this repo is linked as the
-  user's dotfiles repo). The variable name is a Codespaces convention — it
-  points at this template, not at Unix dotfiles. If `$DOTFILES` is not set,
-  `install.sh` falls back to the script's own directory.
-- The `code` command may not be available outside of VS Code/Codespaces environments
-- Some AI tools only read files from specific paths (see tool documentation)
-- Workflow files (`.github/workflows/`) contain `TEMPLATE_PLACEHOLDER` and must be customized
+Generators are the source of truth for compliance artifacts — never
+hand-edit `controls/nist-800-171-mapping.csv` or the headers/TODO stubs
+in `ssp/SSP.md`. Re-run `scripts/gen-controls-csv.py` and
+`scripts/gen-ssp.py` instead. See [`scripts/README.md`](scripts/README.md).
 
-## Updating This Guide
+## Next steps
 
-When making changes to this template:
-1. Update this file if structure/commands/conventions change
-2. Run `./test.sh` to verify integrity
-3. Update README.md if user-facing behavior changes
-4. Update `.context/` files if project direction changes
+The project is built incrementally by the numbered prompt series under
+[`.github/prompts/`](.github/prompts/). Run them in the order documented
+in [`.github/prompts/README.md`](.github/prompts/README.md). This file
+should be updated whenever a new top-level directory or verification
+command is introduced (per the doc-sync rule in
+[`.context/rules/process_doc_maintenance.md`](.context/rules/process_doc_maintenance.md)
+if present, or [`AGENTS.md`](AGENTS.md) §"Ongoing maintenance" otherwise).

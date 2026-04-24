@@ -78,7 +78,7 @@ Priority order when conflicts arise:
 
 ### Neutral
 
-- Structure uses `TEMPLATE_PLACEHOLDER` markers for easy identification of stub content
+- Structure uses HTML-comment marker stubs for easy identification of placeholder content
 - Works alongside existing `AI_REPO_GUIDE.md` (which provides quick reference)
 
 ## Implementation
