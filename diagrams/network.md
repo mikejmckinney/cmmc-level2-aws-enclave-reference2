@@ -132,7 +132,7 @@ flowchart LR
     Role["IAM role<br/>demo-deploy<br/>(scoped to repo + main branch)"]
     TF["terraform apply<br/>terraform/demo/"]
     AWS[("AWS commercial<br/>us-east-1")]
-    URL["Public demo URL<br/>(ALB DNS name)"]
+    URL["Public demo URL<br/>(Lambda Function URL)"]
     Cron["Nightly schedule<br/>demo-destroy.yml"]
 
     Dev -- "type DEPLOY to confirm" --> GHA
