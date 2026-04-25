@@ -138,11 +138,19 @@ resource "aws_security_group" "demo_lambda" {
   tags        = { Name = "${local.name_prefix}-page-lambda" }
 }
 
-resource "aws_vpc_security_group_egress_rule" "demo_lambda_to_vpc" {
+# Egress is intentionally restricted to TCP/443 within the VPC CIDR — VPC
+# interface endpoints (logs, monitoring, sts, kms, ssm*, ec2*, xray) terminate
+# HTTPS on private IPs in the same subnets, and that's the only outbound the
+# demo Lambda needs (PR #13 copilot/gemini sec-MED). The previous
+# `ip_protocol = "-1"` rule allowed every protocol/port to the entire VPC,
+# which was broader than the comment claimed.
+resource "aws_vpc_security_group_egress_rule" "demo_lambda_to_vpc_https" {
   security_group_id = aws_security_group.demo_lambda.id
-  description       = "Allow Lambda \u2192 VPC interface endpoints (logs, etc)."
+  description       = "Allow Lambda \u2192 VPC interface endpoints (HTTPS only)."
   cidr_ipv4         = module.vpc.vpc_cidr_block
-  ip_protocol       = "-1"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
 }
 
 resource "aws_lambda_function" "demo_page" {

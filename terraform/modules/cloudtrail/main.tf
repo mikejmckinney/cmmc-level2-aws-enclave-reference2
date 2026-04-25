@@ -351,8 +351,19 @@ locals {
     # an SSO user signing in without MFA at the IdP would not surface here.
     # Drop the type constraint and let the alarm fire on any successful
     # console sign-in that lacks MFAUsed=Yes.
+    #
+    # SSO/IAM Identity Center caveat (PR #13 codex P2): for federated
+    # AssumedRole sessions, CloudTrail often omits
+    # `additionalEventData.MFAUsed` even when the IdP enforced MFA, which
+    # would produce false positives. Cross-check
+    # `userIdentity.sessionContext.attributes.mfaAuthenticated` — when
+    # the role was assumed from an MFA-authenticated session this is
+    # "true", and the alarm should not fire. Both predicates use `!=`,
+    # which CloudWatch metric filters evaluate as true when the field
+    # is missing — so plain IAMUser logins (no sessionContext at all)
+    # still match.
     console_no_mfa = {
-      pattern = "{ ($.eventName = ConsoleLogin) && ($.additionalEventData.MFAUsed != \"Yes\") && ($.responseElements.ConsoleLogin = \"Success\") }"
+      pattern = "{ ($.eventName = ConsoleLogin) && ($.responseElements.ConsoleLogin = \"Success\") && ($.additionalEventData.MFAUsed != \"Yes\") && ($.userIdentity.sessionContext.attributes.mfaAuthenticated != \"true\") }"
       name    = "ConsoleSignInWithoutMFA"
     }
     kms_key_disable = {
