@@ -310,6 +310,14 @@ Because Phase 4 runs **before** Phase 3 posts the Resolution Report (see "How to
 
 Use `⚠️ Errored` when the per-thread gate passed but the GraphQL mutation failed (e.g. `FORBIDDEN`). On the Copilot path, the relay-fallback job will pick up `⚠️ Errored` rows by Thread ID, post the audit reply under `CLAUDE_PAT`, and fire `resolveReviewThread`. Use `⏭️ Skipped` only when the per-thread gate failed (human author, status not `✅ Fixed`, etc.) — that signals the fallback to leave the thread alone.
 
+**If at least one row is `⚠️ Errored`** (which is the normal Copilot-path outcome — its cloud-agent token cannot complete the mutations), add the trigger label that fires the fallback workflow. Do this **after** posting the Phase 3 Resolution Report (so the report is in place when the fallback scans for it):
+
+```bash
+gh pr edit <pr_number> --add-label phase4-needs-fallback
+```
+
+The `phase4-fallback` job in `.github/workflows/agent-relay-reviews.yml` consumes the label, retries the mutations under `CLAUDE_PAT`, and removes the label on success. Skip this step if every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, or `🚫 Refused (human-authored)` — there is no work for the fallback. See ADR-008 for why the trigger is a label rather than the Phase 3 comment itself.
+
 ### Safety rules
 
 - **Never resolve a human-authored thread**, even if you fixed what they asked for. Humans expect to click Resolve themselves.

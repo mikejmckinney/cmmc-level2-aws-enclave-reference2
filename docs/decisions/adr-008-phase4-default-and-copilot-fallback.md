@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted (amended 2026-04-25 — trigger switched from `issue_comment.created` to `pull_request.labeled` + `workflow_dispatch`; see "Why not `issue_comment`-triggered fallback (post-mortem)" below).
 
 ## Date
 
@@ -76,35 +76,46 @@ report includes the Phase 4 table.
 ### 2. Relay-side fallback for the Copilot path.
 
 `agent-relay-reviews.yml` gains a second job, `phase4-fallback`,
-triggered by `issue_comment.created`. Job-level guards (`if:`):
+triggered by `pull_request.labeled` (label `phase4-needs-fallback`)
+and `workflow_dispatch` (manual override with `pr_number` input).
 
-- The PR carries `copilot-relay`.
-- The comment author is one of the Copilot SWE-agent identities
-  (`copilot`, `Copilot`, `copilot[bot]`, `copilot-swe-agent`,
-  `copilot-swe-agent[bot]`) — every form GitHub may emit across
-  REST/GraphQL and the Copilot product surfaces.
+> **Trigger amendment (2026-04-25).** This ADR originally specified
+> `issue_comment.created` as the trigger. That trigger turned out to
+> be non-autonomous in practice (see "Why not `issue_comment`-triggered
+> fallback (post-mortem)" below), so it has been replaced with the
+> label trigger described here. The rest of the design — fork guard,
+> fingerprint dedup, parser, and per-thread mutation logic — is
+> unchanged. The `auto-resolve-threads` opt-in label is still gone;
+> `phase4-needs-fallback` is a *workflow-internal* signal added by
+> Copilot's Phase 4 step when a mutation returns FORBIDDEN, not a
+> user-facing opt-in.
+
+Job-level guards (`if:`):
+
+- `pull_request.labeled` event with label `phase4-needs-fallback`, OR
+- `workflow_dispatch` event (the `pr_number` input identifies the PR).
 
 Runtime guards (job steps, fail-closed, before any `CLAUDE_PAT` use):
 
 - **Fork guard.** A first step uses the default read-only
   `GITHUB_TOKEN` to fetch the PR's `isCrossRepository` flag and aborts
-  if the head ref is from a fork. The job-level `if:` cannot perform
-  this check — `github.event.repository.full_name` always equals
-  `github.repository` on `issue_comment` because the comment lives on
-  the upstream PR — so the runtime check is the actual fork guard for
+  if the head ref is from a fork. `pull_request.labeled` and
+  `workflow_dispatch` payloads do not carry a fork flag we can rely on
+  in `if:`, so the runtime check is the actual fork guard for
   `CLAUDE_PAT`.
-- **Phase 4 header presence.** Checked **after** re-fetching the
-  comment body (step 1 below), not in the job-level `if:`. The
-  `issue_comment` event payload may truncate long comment bodies, so a
-  job-level `contains(github.event.comment.body, '…')` check can
-  false-negative when the Phase 4 section sits past the truncation
-  cutoff.
+- **Phase 4 header presence.** Checked **after** scanning the PR's
+  comments (step 1 below) for the most recent Copilot-authored Phase 3
+  Resolution Report. The label trigger does not provide a specific
+  comment ID, so the workflow finds the latest qualifying comment
+  itself.
 
 Steps:
 
-1. Re-fetch the comment via
-   `gh api /repos/{owner}/{repo}/issues/comments/{id}` (event payload
-   may truncate long bodies).
+1. Scan PR comments via `gh api /repos/{owner}/{repo}/issues/{n}/comments`
+   (paginated). Filter to comments whose author normalizes to a Copilot
+   identity AND whose body contains the Phase 4 header. Take the most
+   recent. (The trigger label gives us a PR; the workflow finds the
+   comment.)
 2. Parse the Phase 4 markdown table for rows whose Action is
    `⚠️ Errored`. To make this parse robust, `pr-resolve-all.md` adds a
    canonical `Thread ID` column to the Phase 4 table — the GraphQL node
@@ -128,13 +139,47 @@ Steps:
    non-zero. Do not retry; do not silently skip. The fingerprint is
    computed over the Phase 4 section so that re-fires on a malformed
    table don't spam the PR.
+7. **Remove the `phase4-needs-fallback` label** so the workflow does
+   not re-fire on subsequent label events for the same PR. The
+   fingerprint guard above is the primary idempotency layer; label
+   removal is the second. Re-adding the label is the supported way to
+   re-run after a comment edit.
 
 The new job has its own `concurrency` group
-(`phase4-fallback-${{ github.event.issue.number }}`) and its own
-permissions block (`pull-requests: write`, `contents: read`). The
-existing `relay` job's `concurrency` block is moved from the
-workflow level to the job level so the two jobs can run
-concurrently on the same PR without cancelling each other.
+(`phase4-fallback-${{ github.event.pull_request.number || inputs.pr_number }}`)
+and its own permissions block (`pull-requests: write`,
+`contents: read`). The existing `relay` job's `concurrency` block is
+moved from the workflow level to the job level so the two jobs can
+run concurrently on the same PR without cancelling each other.
+
+### Why not `issue_comment`-triggered fallback (post-mortem)
+
+The original v1 of this ADR specified `issue_comment.created` as the
+fallback trigger because Copilot posts the Phase 3 Resolution Report
+as a PR comment. In practice, every Copilot Phase 3 comment produced
+an `action_required` workflow run that sat idle until a maintainer
+clicked **Approve and run** in the Actions UI. The per-repo "Require
+approval for first-time contributors" setting only governs
+`pull_request` events from forks; it does not exempt `issue_comment`
+events from app/bot identities without write access, and there is no
+per-identity allow-list to disable the gate after a one-time approval.
+
+Observed on PRs #4, #5, #7: every Copilot Phase 3 comment fired one
+`action_required` relay run. The fallback was therefore non-autonomous
+— a human had to approve every cycle, defeating the point.
+
+The label-trigger replacement is identical in safety properties
+(`pull_request.labeled` events from app/bot identities with repo write
+scope are not gated the same way) and adds the bonus that the trigger
+is explicit at the source: Copilot's `pr-resolve-all.md` Phase 4 step
+adds `phase4-needs-fallback` only when at least one row is
+`⚠️ Errored`, so there is one workflow run per real failure rather
+than one per Phase 3 comment.
+
+`workflow_dispatch` is kept as a manual override so a maintainer can
+fire the fallback from the Actions UI without needing Copilot to
+re-trigger — e.g. when investigating a stuck PR or after editing the
+Phase 4 table by hand.
 
 ## Options Considered
 
