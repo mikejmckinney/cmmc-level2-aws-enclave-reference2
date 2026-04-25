@@ -66,10 +66,15 @@ Run, in order, and abort with a single PR comment if any check fails:
 3. **Abort if** `isDraft == true` (not ready for merge).
 4. **Abort if** `isCrossRepository == true` (fork guard, Hard rule 5).
 5. **Abort if** branch protection on the base branch cannot be
-   verified — `gh api "repos/:owner/:repo/branches/<base>/protection"`
-   should return a protection object. If it 404s, post a comment
-   warning that auto-merge will not enforce gates and stop. (The
-   maintainer can re-invoke after enabling protection.)
+   verified. Derive `owner` and `repo` from
+   `gh repo view --json owner,name` (or `GITHUB_REPOSITORY`), and
+   use `baseRefName` from step 1 as `base`. Then call:
+   ```
+   gh api "repos/$owner/$repo/branches/$base/protection"
+   ```
+   If it 404s, post a comment warning that auto-merge will not
+   enforce gates and stop. (The maintainer can re-invoke after
+   enabling protection.)
 
 If all checks pass, post a one-line "🚀 Driving PR #N to merge" comment
 and continue.
@@ -79,15 +84,23 @@ and continue.
 The goal is **quiescence**: no new bot review activity for a bounded
 window, AND at least one bot has reviewed the latest commit.
 
-**Bot allow-list** (mirrors `pr-resolve-all.md` Phase 4):
-- `copilot-pull-request-reviewer[bot]`
-- `gemini-code-assist[bot]`
-- `chatgpt-codex-connector[bot]`
-- `copilot-swe-agent[bot]` (relay-only)
-- Any additional bot identity already covered by
-  `.github/workflows/agent-relay-reviews.yml`.
+**Bot allow-list** (must match `pr-resolve-all.md` Phase 4):
+- Normalize reviewer identities before comparison by stripping any
+  trailing `[bot]` suffix (if present) and comparing
+  case-insensitively against the following normalized list:
+  - `gemini-code-assist`
+  - `copilot-pull-request-reviewer`
+  - `copilot`
+  - `chatgpt-codex-connector`
+  - `codex`
+  - `claude`
+  - `copilot-swe-agent` (relay-only)
+- Apply the same normalization rule as `pr-resolve-all.md` Phase 4:
+  a REST-returned `gemini-code-assist[bot]` → strip `[bot]` →
+  `gemini-code-assist` → lowercase → match ✅. Treat any raw GitHub
+  login that normalizes to one of the above values as allow-listed.
 
-**Polling pattern** (use `gh pr view <n> --json reviews,comments`):
+**Polling pattern** (use `gh pr view <n> --json headRefOid,reviews,comments`):
 
 1. Record `headRefOid` (the latest commit SHA).
 2. Track the timestamp of the most recent bot review or bot review
@@ -123,8 +136,9 @@ This relies on the "Stable contract for callers" section in
 
 **Caller success for this cycle** (per the contract):
 - Every `ISS-NN` in the Phase 3 status table is `✅ Fixed`,
-  `🔁 Already resolved`, `⏭️ Deferred`, or `❌ Won't fix`. Any
-  `❓ Cannot reproduce` triggers escalation, not retry.
+  `✅ Already resolved`, `❌ Not reproducible`, or `❌ Out of scope`.
+  Any `⚠️ Needs clarification` or `⚠️ Partial fix` triggers
+  escalation, not retry.
 - Every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, `🚫 Refused
   (human-authored)`, or `⚠️ Errored` (the relay-fallback workflow
   will retry errored rows).
@@ -167,24 +181,37 @@ naming the slow check.
 
 ## Phase 4.5 — Human-comment guard (Hard rule 4)
 
-Enumerate review threads on the PR:
+Enumerate **all** review threads on the PR by paginating until
+`hasNextPage` is false. Derive `$owner` and `$repo` from
+`gh repo view --json owner,name` (same values obtained in Phase 0).
 
 ```bash
-gh api graphql -f query='
-  query($n: Int!) {
-    repository(owner:"...", name:"...") {
-      pullRequest(number: $n) {
-        reviewThreads(first: 100) {
-          nodes {
-            id
-            isResolved
-            comments(first: 1) { nodes { author { login } } }
+# Paginate reviewThreads; repeat with $after until hasNextPage == false
+gh api graphql \
+  -F owner="$owner" -F repo="$repo" -F n=<n> -F after="$cursor" \
+  -f query='
+    query($owner: String!, $repo: String!, $n: Int!, $after: String) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $n) {
+          reviewThreads(first: 100, after: $after) {
+            nodes {
+              id
+              isResolved
+              comments(first: 1) { nodes { author { login } } }
+            }
+            pageInfo { hasNextPage endCursor }
           }
         }
       }
-    }
-  }' -F n=<n>
+    }'
 ```
+
+On the first call omit `$after` (or pass an empty string). After each
+page, check `reviewThreads.pageInfo.hasNextPage`. If `true`, set
+`$cursor` to `reviewThreads.pageInfo.endCursor` and repeat. Collect
+all `nodes` across pages before making the merge/abort decision below.
+Failing to paginate can miss unresolved human threads beyond page 100
+and would violate Hard rule 4.
 
 For each thread where `isResolved == false`:
 - If the root comment author is in the bot allow-list (Phase 1) and
@@ -205,12 +232,21 @@ Notes:
   preserving branch protection. **Do not** use `--merge` without
   `--auto` — that would bypass gates if checks haven't completed.
 - `--delete-branch` removes the head branch on merge.
-- If `--auto` is rejected (e.g. status checks already complete),
-  fall back to `gh pr merge <n> --squash --delete-branch` —
-  branch protection still gates this; the only difference is timing.
+- If `--auto` is rejected because auto-merge is unnecessary (for
+  example, required checks are already complete and GitHub reports
+  the PR is mergeable now), you may fall back to
+  `gh pr merge <n> --squash --delete-branch` **only after**
+  explicitly verifying **all** of the following are already true:
+  - required status checks are complete and passing (Phase 4 green);
+  - required approvals are present;
+  - unresolved human review threads are zero (Phase 4.5 cleared); and
+  - GitHub reports `mergeableState` is not `BLOCKED`, `CONFLICTING`,
+    or any other non-ready state.
+  If any of those cannot be confirmed, do **not** use the fallback —
+  abort and report what is still blocking merge.
 
 If the merge command errors:
-- `mergeable_state == blocked` — abort and report the blocker.
+- `mergeableState == BLOCKED` — abort and report the blocker.
 - Permission errors — abort and request human intervention.
 - Anything else — abort, do not retry blindly.
 

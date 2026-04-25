@@ -54,8 +54,9 @@ caller in the same PR.
 - Heading: `## Resolution Report` (followed by the Phase 3 sections in
   the example block in this file).
 - Includes a per-item status table where every `ISS-NN` has one of the
-  statuses defined in Phase 2 Step 5 (`✅ Fixed`, `❌ Won't fix`,
-  `⏭️ Deferred`, `🔁 Already resolved`, `❓ Cannot reproduce`).
+  statuses defined in Phase 2 Step 5: `✅ Fixed`, `✅ Already resolved`,
+  `⚠️ Needs clarification`, `⚠️ Partial fix`, `❌ Not reproducible`,
+  `❌ Out of scope`.
 
 **C. Phase 4 Thread auto-resolution table**
 - Sub-heading inside the Phase 3 comment:

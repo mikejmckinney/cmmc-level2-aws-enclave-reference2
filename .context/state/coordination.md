@@ -50,6 +50,23 @@ Every `task_*.md` file lives in exactly one of these states. Transitions are one
 
 ## Active Locks
 
+## Lock: pr-10
+<!-- managed-for-pr:10 -->
+**Role**: architect
+**Session**: feat/9-drive-pr-to-merge
+**Claimed At**: 2026-04-25T02:05:13Z
+**Expected Duration**: TBD
+**Paths**:
+- .github/copilot-instructions.md
+- .github/prompts/README.md
+- .github/prompts/drive-pr-to-merge.md
+- .github/prompts/pr-resolve-all.md
+- AGENTS.md
+- AI_REPO_GUIDE.md
+**Depends On**: none
+**Blocks**: none
+**State**: in_progress
+
 ## Lock: pr-7
 <!-- managed-for-pr:7 -->
 **Role**: backend
