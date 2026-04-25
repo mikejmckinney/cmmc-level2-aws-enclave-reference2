@@ -88,8 +88,8 @@ is by descending total score (ties broken by ascending demo cost).
 
 | Dimension | Weight | Rationale |
 |---|---|---|
-| Number of NIST 800-171 controls the module moves from `requires_client_config = TRUE` to `addressed_by_repo = TRUE` (in `controls/nist-800-171-mapping.csv`) | 3 | Direct compliance utility — the whole point of the repo |
-| Demo-cost ceiling per month at the documented sizing (raw $/mo) | -2 | Cheaper modules ship earlier; expensive ones need their own destroy-workflow verification first |
+| Number of NIST 800-171 controls the module moves from `addressed_by_repo = none` to `addressed_by_repo = partial` or `full`, and/or from `requires_client_config = true` to `requires_client_config = false`, in `controls/nist-800-171-mapping.csv` (per the enum values defined in `controls/schema.json`) | 3 | Direct compliance utility — the whole point of the repo |
+| Demo-cost ceiling per month at the documented sizing (raw $/mo, rounded down to the nearest dollar so sub-$1 sundries score as 0) | -2 | Cheaper modules ship earlier; expensive ones need their own destroy-workflow verification first |
 | GovCloud parity (1 = full parity, 0 = partial, -2 = no parity) | 2 | Modules with no GovCloud parity should fail closed, not ship |
 | Number of *other Phase 8 modules* that depend on this one (transitive) | 2 | Prerequisite-first reduces rework |
 | Implementation complexity (1 = small, 0 = medium, -1 = large) | 1 | Smaller PRs review faster and reduce blast radius |
@@ -98,15 +98,16 @@ Applied to the four in-scope modules:
 
 | Module | Controls | Cost/mo | GovCloud | Depends-on count | Complexity | Score |
 |---|---|---|---|---|---|---|
-| `secrets` | ~4 (SC-12, SC-28, IA family) | ~$0.40/secret | 1 | 2 (rds, alarms reference it) | 1 (small) | `4·3 − 0·(-2) + 1·2 + 2·2 + 1·1` = **19** |
-| `s3_cui` | ~6 (MP family + SC-28 + AU mapping via existing data events) | ~$0.20 (storage-trivial demo bucket) | 1 | 0 | 0 (medium) | `6·3 − 0·(-2) + 1·2 + 0·2 + 0·1` = **20** |
-| `rds_cui` | ~5 (SC-12, SC-28, IA-5, AU family) | ~$13/mo (db.t4g.micro + 20 GB gp3) | 1 | 0 | -1 (large) | `5·3 − 13·(-2) + 1·2 + 0·2 + (-1)·1` = **−10** (cost dominates) |
-| `alarms` | ~3 (IR family) | ~$0/mo (alarms are free; SNS at demo volume is free-tier) | 1 | 0 (consumes Phase 3 outputs) | 1 (small) | `3·3 − 0·(-2) + 1·2 + 0·2 + 1·1` = **12** |
+| `secrets` | ~4 (SC-12, SC-28, IA family) | $0/mo (rounded; ~$0.40/secret) | 1 | 2 (rds, alarms reference it) | 1 (small) | `4·3 + 0·(-2) + 1·2 + 2·2 + 1·1` = **19** |
+| `s3_cui` | ~6 (MP family + SC-28 + AU mapping via existing data events) | $0/mo (rounded; ~$0.20 storage-trivial demo bucket) | 1 | 0 | 0 (medium) | `6·3 + 0·(-2) + 1·2 + 0·2 + 0·1` = **20** |
+| `rds_cui` | ~5 (SC-12, SC-28, IA-5, AU family) | ~$13/mo (db.t4g.micro + 20 GB gp3) | 1 | 0 | -1 (large) | `5·3 + 13·(-2) + 1·2 + 0·2 + (-1)·1` = **−10** (cost dominates) |
+| `alarms` | ~3 (IR family) | $0/mo (alarms are free; SNS at demo volume is free-tier) | 1 | 0 (consumes Phase 3 outputs) | 1 (small) | `3·3 + 0·(-2) + 1·2 + 0·2 + 1·1` = **12** |
 
-(Cost enters the score as the literal dollar figure with weight −2,
-which is why RDS scores so low — the rubric is designed to punish
-high-monthly-cost demo modules unless the control coverage is
-overwhelming.)
+(Cost enters each score as the literal $/mo figure multiplied by
+weight −2, which is why RDS scores so low — the rubric is designed to
+punish high-monthly-cost demo modules unless the control coverage is
+overwhelming. Per the dimension table, sub-$1/mo sundries are rounded
+down to 0 so the rubric stays in integers.)
 
 **Resulting sequencing**: `s3_cui` (20) → `secrets` (19) → `alarms` (12)
 → `rds_cui` (−10).
@@ -180,8 +181,9 @@ acceptance criteria) plus these Phase 8 additions:
 - [ ] Wired into `terraform/govcloud/` (validate-only)
 - [ ] Wired into `terraform/demo/` (deployable; destroy-verified)
 - [ ] `controls/nist-800-171-mapping.csv` updated: at least one row
-  flips from `requires_client_config = TRUE` to
-  `addressed_by_repo = TRUE`
+  moves `addressed_by_repo` from `none` to `partial` or `full`, and/or
+  flips `requires_client_config` from `true` to `false` (per the enum
+  values defined in `controls/schema.json`)
 - [ ] `ssp/SSP.md` updated: control statements for newly-covered
   controls promoted from `TODO` to written
 - [ ] `compliance-checks.yml` CI passes (CSV/SSP sync guards)

@@ -54,10 +54,15 @@ Per ADR-011 §5, every workload-module PR delivers:
 ### Module files (`terraform/modules/workloads/<name>/`)
 
 - `main.tf` — resources, with `data.aws_partition.current` lookup; no
-  hardcoded `arn:aws:` strings
+  hardcoded `arn:aws:` strings. Partition-conditional features fail
+  closed at `terraform validate` time via `precondition` blocks on the
+  affected resource / output / `check` block (per ADR-011 §3 —
+  variables can’t host `precondition`, only `validation`)
 - `variables.tf` — input variables; every var has `description` and
-  (where applicable) `validation` blocks; partition-conditional
-  features use `precondition` per ADR-011 §3
+  (where applicable) a `validation` block. Variable-shaped invariants
+  (“must be a /16 CIDR”, “must match a known partition string”) live
+  here; cross-resource or partition-conditional invariants live on
+  `precondition` blocks in `main.tf` / `outputs.tf` / `check` blocks
 - `outputs.tf` — minimum surface needed for the demo + govcloud roots
   to consume the module; downstream consumers documented in README
   "Outputs" section
@@ -100,13 +105,14 @@ Per ADR-011 §5, every workload-module PR delivers:
 
 ### Compliance artifact updates
 
-- `controls/nist-800-171-mapping.csv` — at least one row's
-  `addressed_by_repo` column flips `FALSE → TRUE` (or
-  `requires_client_config TRUE → FALSE`) as a result of this module
+- `controls/nist-800-171-mapping.csv` — at least one row moves
+  `addressed_by_repo` from `none` to `partial` or `full`, and/or flips
+  `requires_client_config` from `true` to `false` (per the enum values
+  defined in `controls/schema.json`) as a result of this module
   shipping. The CSV columns to update for each affected row:
-  `addressed_by_repo`, `aws_services`, `terraform_resources`. If no
-  row qualifies, this is a signal that the module isn't actually
-  earning its keep — escalate, don't fudge.
+  `addressed_by_repo`, `aws_services`, `terraform_resources`,
+  `requires_client_config`. If no row qualifies, this is a signal that
+  the module isn’t actually earning its keep — escalate, don’t fudge.
 - `ssp/SSP.md` — for every newly-covered control, replace the `TODO`
   status with a written control statement following the format used
   by Phase 3 controls. The CSV↔SSP sync guard in
