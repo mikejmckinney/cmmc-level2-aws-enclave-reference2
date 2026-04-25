@@ -102,6 +102,38 @@ resource "aws_s3_bucket_policy" "trail_access_logs" {
   policy = data.aws_iam_policy_document.trail_access_logs.json
 }
 
+# Lifecycle: transition access logs to IA at 30 days, GLACIER at 90 days,
+# expire at 365 days. S3 access logs accumulate quickly; this caps storage
+# cost without losing the recent operational window.
+resource "aws_s3_bucket_lifecycle_configuration" "trail_access_logs" {
+  bucket = aws_s3_bucket.trail_access_logs.id
+
+  rule {
+    id     = "expire-access-logs"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+    expiration {
+      days = 365
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 resource "aws_s3_bucket_logging" "trail" {
   bucket        = aws_s3_bucket.trail.id
   target_bucket = aws_s3_bucket.trail_access_logs.id
