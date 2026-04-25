@@ -14,6 +14,54 @@ resource "aws_s3_bucket" "delivery" {
   tags          = var.tags
 }
 
+# Separate bucket that receives S3 access logs for the delivery bucket above.
+# Per AWS guidance the access-log target must be a different bucket from the
+# source. tfsec flags the target as "missing logging" of its own — ignored
+# with rationale below to avoid an infinite-recursion / cost loop.
+# tfsec:ignore:aws-s3-enable-bucket-logging
+resource "aws_s3_bucket" "delivery_access_logs" {
+  bucket        = "${local.bucket_name}-access-logs"
+  force_destroy = false
+  tags          = merge(var.tags, { Purpose = "S3 access-log target for ${local.bucket_name}" })
+}
+
+resource "aws_s3_bucket_public_access_block" "delivery_access_logs" {
+  bucket                  = aws_s3_bucket.delivery_access_logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "delivery_access_logs" {
+  bucket = aws_s3_bucket.delivery_access_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 access-log delivery from the S3 service principal does not support
+# SSE-KMS — only SSE-S3 (AES256) writes are accepted on the target bucket.
+# tfsec:ignore:aws-s3-encryption-customer-key
+resource "aws_s3_bucket_server_side_encryption_configuration" "delivery_access_logs" {
+  bucket = aws_s3_bucket.delivery_access_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      # Access-log delivery uses SSE-S3 (AES256) per AWS requirement; SSE-KMS
+      # is not supported for log-delivery writes from the S3 service principal.
+      sse_algorithm = "AES256"
+    }
+    bucket_key_enabled = true
+  }
+}
+
+resource "aws_s3_bucket_logging" "delivery" {
+  bucket        = aws_s3_bucket.delivery.id
+  target_bucket = aws_s3_bucket.delivery_access_logs.id
+  target_prefix = "delivery-bucket-access/"
+}
+
 resource "aws_s3_bucket_public_access_block" "delivery" {
   bucket                  = aws_s3_bucket.delivery.id
   block_public_acls       = true

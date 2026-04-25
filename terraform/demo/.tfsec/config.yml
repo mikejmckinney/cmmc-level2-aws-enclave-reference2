@@ -1,0 +1,12 @@
+---
+# tfsec exclusions scoped to the demo root.
+#
+# This file lists tfsec rules that are *intentionally* not satisfied in the
+# commercial-AWS demo for documented design reasons. The same rules MUST stay
+# enforced in `terraform/govcloud/` (no .tfsec/ override there).
+exclude:
+  # AVD-AWS-0014 — "Trail is not enabled across all regions."
+  # The demo intentionally runs a single-region trail to keep AWS cost low
+  # for the public-facing reference deployment. The govcloud root sets
+  # `is_multi_region = true` (the production-correct value).
+  - aws-cloudtrail-enable-all-regions

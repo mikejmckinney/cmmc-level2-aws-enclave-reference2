@@ -16,6 +16,7 @@ module "vpc" {
   az_count                = var.az_count
   enable_nat_gateway      = false
   flow_log_retention_days = var.log_retention_days
+  kms_key_arn             = module.kms.key_arns["logs"]
 }
 
 # -----------------------------------------------------------------------------
