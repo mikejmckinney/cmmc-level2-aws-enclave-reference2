@@ -188,7 +188,7 @@ Enumerate **all** review threads on the PR by paginating until
 ```bash
 # Paginate reviewThreads; repeat with $after until hasNextPage == false
 gh api graphql \
-  -F owner="$owner" -F repo="$repo" -F n=<n> -F after="$cursor" \
+  -F owner="$owner" -F repo="$repo" -F n="$n" -F after="$cursor" \
   -f query='
     query($owner: String!, $repo: String!, $n: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
@@ -206,7 +206,7 @@ gh api graphql \
     }'
 ```
 
-On the first call omit `$after` (or pass an empty string). After each
+Initialize `$cursor` to an empty string before the first call (`cursor=""`); the `-F after="$cursor"` flag is always included — GitHub GraphQL treats an empty string as "no cursor" for the first page. After each
 page, check `reviewThreads.pageInfo.hasNextPage`. If `true`, set
 `$cursor` to `reviewThreads.pageInfo.endCursor` and repeat. Collect
 all `nodes` across pages before making the merge/abort decision below.
