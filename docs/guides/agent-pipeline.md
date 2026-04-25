@@ -219,10 +219,14 @@ The labels in the table below are created automatically by `scripts/setup.sh`. M
   `.github/prompts/pr-resolve-all.md`.
   > On the Copilot path (`copilot-relay` or `@copilot follow`), the
   > GraphQL mutations may return `FORBIDDEN` because the Copilot
-  > cloud-agent token lacks `pull-requests:write`. The
-  > `phase4-fallback` job in `agent-relay-reviews.yml` parses the
-  > Phase 3 Resolution Report's `⚠️ Errored` rows by Thread ID and
-  > retries the mutations under `CLAUDE_PAT`. See ADR-008.
+  > cloud-agent token lacks `pull-requests:write`. When Copilot's
+  > Phase 4 step records at least one `⚠️ Errored` row, it adds the
+  > `phase4-needs-fallback` label to the PR. The `phase4-fallback`
+  > job in `agent-relay-reviews.yml` consumes the label, parses the
+  > most recent Phase 3 Resolution Report on the PR, retries the
+  > mutations under `CLAUDE_PAT`, and removes the label on success.
+  > A `workflow_dispatch` manual override is also available from
+  > the Actions UI. See ADR-008.
 - Add `copilot-relay` to enable the Copilot-relay path that forwards bot
   review comments to Copilot's cloud agent. Both labels can be combined
   when you want both paths running, though typically you'll pick one

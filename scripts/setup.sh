@@ -353,6 +353,7 @@ elif [[ -n "$_gh_auth_ok" ]]; then
     _ensure_label "claude-fix"            "FBCA04" "Opt PR in to agent-fix-reviews.yml (Claude resolution)"
     _ensure_label "claude-review"         "1D76DB" "Opt PR in to claude.yml auto-review (invokes judge subagent)"
     _ensure_label "copilot-relay"         "5319E7" "Opt PR in to agent-relay-reviews.yml (Copilot resolution; included in subscription)"
+    _ensure_label "phase4-needs-fallback" "5319E7" "Triggers phase4-fallback job in agent-relay-reviews.yml under CLAUDE_PAT (ADR-008)"
     _ensure_label "smoke-test"            "E99695" "Workflow-validation PR; auto-merge/relay/fix-reviews skip to avoid mid-test interference"
     _ensure_label "copilot:ready"         "0E8A16" "Assign Copilot when budget allows"
     _ensure_label "copilot:in-progress"   "1D76DB" "Assigned to Copilot, counts toward concurrent budget"
@@ -362,7 +363,7 @@ elif [[ -n "$_gh_auth_ok" ]]; then
     _ensure_label "needs-human"           "B60205" "Requires human input (e.g., empty roadmap phase, CI failure)"
     _ensure_label "coordination-sync"     "BFDADC" "Auto-filed by Coordination Sync workflow (stale lock tracking)"
     _ensure_label "no-coordination-check" "EDEDED" "Opt PR out of agent-coordination-sync.yml suggestions"
-    log_info "Pipeline labels ensured (auto-merge, agent-complete, no-auto-ready, claude-fix, claude-review, copilot-relay, smoke-test, copilot:*, from-backlog, needs-human, coordination-sync, no-coordination-check)"
+    log_info "Pipeline labels ensured (auto-merge, agent-complete, no-auto-ready, claude-fix, claude-review, copilot-relay, phase4-needs-fallback, smoke-test, copilot:*, from-backlog, needs-human, coordination-sync, no-coordination-check)"
 
     # Budget knobs for agent-assign-copilot.yml. Only set if missing so a
     # re-run of setup.sh doesn't clobber tuned values. `gh variable get` is
