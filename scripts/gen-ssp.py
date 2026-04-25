@@ -4,6 +4,10 @@
 10 controls get fully-written implementation statements (inline below);
 the remaining 100 get TODO stubs in a parser-stable format.
 
+Note: as workload modules land (Phase 8+) the WRITTEN dict grows and the
+count in the SSP preamble + the assertion below + scripts/check-ssp.sh
+must move together.
+
 Run from repo root:
     python3 scripts/gen-ssp.py
 """
@@ -127,7 +131,59 @@ WRITTEN: dict[str, tuple[str, str, str, str]] = {
         "`terraform/modules/cloudtrail/main.tf` (`aws_cloudwatch_log_metric_filter.this`); GuardDuty findings export "
         "via EventBridge to ticketing.",
     ),
+    "3.8.1": (
+        "Implemented",
+        "Cloud Security Engineering; Workload Owners",
+        "CUI-bearing S3 buckets are provisioned via the `s3_cui` workload module (`terraform/modules/workloads/s3_cui/`), "
+        "instantiated in `terraform/govcloud/main.tf` as `module.s3_cui`. The module enforces SSE-KMS at rest using the "
+        "`data` CMK, blocks every public-access vector (`block_public_acls`, `block_public_policy`, `ignore_public_acls`, "
+        "`restrict_public_buckets`), and applies a bucket policy that denies any `s3:PutObject` lacking the "
+        "`data_classification = cui` request tag. AWS handles physical-media protection by contract; the module "
+        "addresses the logical-media half of the control.",
+        "`terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket.cui`, `aws_s3_bucket_public_access_block.cui`, "
+        "`aws_s3_bucket_server_side_encryption_configuration.cui`, `aws_s3_bucket_policy.cui`); "
+        "`terraform/govcloud/main.tf` (`module.s3_cui`); CloudTrail `PutObject` events showing "
+        "`requestParameters.x-amz-tagging` set on every successful upload.",
+    ),
+    "3.8.2": (
+        "Implemented",
+        "Cloud Security Engineering; Workload Owners",
+        "Read access is gated at three layers: (1) the `data` KMS key policy restricts `kms:Decrypt` to named workload "
+        "roles; (2) the `s3_cui` bucket policy denies `s3:PutObject` without the classification tag and denies "
+        "`s3:DeleteObjectTagging` outright (so an uploaded object's classification cannot be erased); (3) the "
+        "public-access block on the bucket forbids any anonymous or wildcard cross-account principal.",
+        "`terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_policy.cui`, statements "
+        "`DenyPutObjectWithoutClassificationTag` and `DenyTagRemoval`); `terraform/modules/kms/main.tf` (key policy); "
+        "CloudTrail `AccessDenied` events when the tag guard fires.",
+    ),
+    "3.8.6": (
+        "Implemented",
+        "Cloud Security Engineering",
+        "All `s3:*` calls against the CUI bucket and its access-log target bucket are denied unless "
+        "`aws:SecureTransport = true`, via the `DenyInsecureTransport` statements in both bucket policies. In the "
+        "GovCloud partition the underlying KMS CMK is FIPS 140-2 / 140-3 validated, so transport encryption AND data "
+        "key encryption both clear the CMMC L2 cryptographic-module bar. Snowball Edge (used for offline transport) "
+        "ships with FIPS-validated crypto modules and remains the documented out-of-band path.",
+        "`terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_policy.cui` + `aws_s3_bucket_policy.access_logs`, "
+        "statements `DenyInsecureTransport`); `terraform/modules/kms/main.tf` (`aws_kms_key.this`); AWS FIPS endpoint "
+        "documentation; Snowball Edge security overview.",
+    ),
+    "3.8.9": (
+        "Implemented",
+        "Cloud Security Engineering; Workload Owners",
+        "The `s3_cui` module enables versioning on the CUI bucket so accidental overwrites and deletes leave a "
+        "recoverable prior version, and applies a non-current-version expiration lifecycle (default 90 days) so "
+        "version history does not accumulate unbounded. All current and non-current versions are encrypted with the "
+        "`data` CMK via SSE-KMS. AWS Backup vaults wired by the consumer onto `module.s3_cui.bucket_arn` inherit the "
+        "same KMS protection. Object Lock for WORM retention is documented as a Production override and is the "
+        "consumer's choice when the use case demands it.",
+        "`terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_versioning.cui`, "
+        "`aws_s3_bucket_lifecycle_configuration.cui` rule `cui-lifecycle`); "
+        "`terraform/modules/workloads/s3_cui/README.md` §\"Production overrides\" (Object Lock, AWS Backup wiring); "
+        "client-supplied AWS Backup plan ARN.",
+    ),
 }
+
 
 
 def main() -> None:
@@ -146,15 +202,15 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
     written = sum(1 for r in rows if r["control_id"] in WRITTEN)
-    assert written == 10, f"expected 10 written controls, got {written}"
+    assert written == 14, f"expected 14 written controls, got {written}"
 
     parts: list[str] = []
     parts.append(dedent("""\
         # System Security Plan — CMMC L2 / NIST 800-171 r2 CUI Enclave (Reference)
 
-        > **Status:** Reference skeleton. 10 of 110 controls have fully-written
+        > **Status:** Reference skeleton. 14 of 110 controls have fully-written
         > implementation statements (those for which the Terraform in this
-        > repository materially implements the control). The remaining 100 are
+        > repository materially implements the control). The remaining 96 are
         > parser-stable `TODO` stubs that an implementing organization fills in
         > as part of authorization. The Implementation column in
         > [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv)

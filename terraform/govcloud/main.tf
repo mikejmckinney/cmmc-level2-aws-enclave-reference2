@@ -121,3 +121,16 @@ module "config" {
   include_global_resource_types  = true
   conformance_pack_template_body = var.config_conformance_pack_template_body
 }
+
+# -----------------------------------------------------------------------------
+# CUI data bucket — first workload module from the Phase 8 library
+# (prompt 11). Reference pattern only; consumers swap in their own name and
+# wire workload IAM roles to consume it. The `data` KMS key declared above
+# is finally used here — that's intentional, not vestigial.
+# -----------------------------------------------------------------------------
+module "s3_cui" {
+  source = "../modules/workloads/s3_cui"
+
+  name        = local.name_prefix
+  kms_key_arn = module.kms.key_arns["data"]
+}
