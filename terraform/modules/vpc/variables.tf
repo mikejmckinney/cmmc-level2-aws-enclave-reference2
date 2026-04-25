@@ -31,6 +31,11 @@ variable "flow_log_retention_days" {
   default     = 365
 }
 
+variable "kms_key_arn" {
+  description = "ARN of the KMS CMK used to encrypt the VPC Flow Logs CloudWatch Logs group. Required so flow-log content (which can include source/destination IPs and bytes-transferred) is encrypted at rest with a customer-managed key."
+  type        = string
+}
+
 variable "tags" {
   description = "Tags applied to all resources created by this module."
   type        = map(string)

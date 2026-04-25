@@ -5,6 +5,7 @@ AWS Config recorder + delivery channel + (optional) NIST 800-171 conformance pac
 ## What it creates
 
 - KMS-encrypted S3 delivery bucket (versioned, public-access blocked, deny-non-TLS).
+- `aws_s3_bucket` (`*-access-logs`) — dedicated S3 server access-log target for the delivery bucket. SSE-S3 (AES256) encrypted — SSE-KMS is not supported for S3 log-delivery writes. Has a bucket policy granting `logging.s3.amazonaws.com` `s3:PutObject`; does not log its own access to avoid recursion.
 - IAM role for the Config service with the managed `AWS_ConfigRole` attached (partition-aware ARN).
 - `aws_config_configuration_recorder` recording all supported resources (global resources toggled by `include_global_resource_types`).
 - `aws_config_delivery_channel` with `Six_Hours` snapshot frequency by default.

@@ -141,11 +141,11 @@ resource "aws_security_group" "endpoints" {
   }
 
   egress {
-    description = "Allow all egress (intra-VPC return traffic)"
+    description = "Return traffic to VPC CIDR (intra-VPC interface-endpoint replies)."
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.cidr_block]
   }
 
   tags = merge(var.tags, { Name = "${var.name}-endpoints" })
@@ -183,6 +183,7 @@ resource "aws_vpc_endpoint" "dynamodb" {
 resource "aws_cloudwatch_log_group" "flow" {
   name              = "/aws/vpc/${var.name}/flow-logs"
   retention_in_days = var.flow_log_retention_days
+  kms_key_id        = var.kms_key_arn
   tags              = var.tags
 }
 
@@ -205,6 +206,12 @@ data "aws_iam_policy_document" "flow_publish" {
       "logs:PutLogEvents",
       "logs:DescribeLogStreams",
     ]
+    # The `:*` suffix on the log-group ARN scopes to log-streams *within this
+    # one log group*. CloudWatch Logs streams are created dynamically by VPC
+    # Flow Logs (one per ENI per hour) and cannot be enumerated at terraform
+    # plan time. The wildcard is required by the service contract; this is
+    # not a least-privilege violation.
+    # tfsec:ignore:aws-iam-no-policy-wildcards
     resources = ["${aws_cloudwatch_log_group.flow.arn}:*"]
   }
 }

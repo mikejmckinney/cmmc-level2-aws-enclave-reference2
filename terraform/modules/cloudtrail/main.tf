@@ -17,6 +17,129 @@ resource "aws_s3_bucket" "trail" {
   tags                = var.tags
 }
 
+# Separate bucket that receives S3 access logs for the trail bucket above.
+# Per AWS guidance the access-log target must be a different bucket from the
+# source. tfsec flags the target as "missing logging" of its own — ignored
+# with rationale below to avoid an infinite-recursion / cost loop.
+# tfsec:ignore:aws-s3-enable-bucket-logging
+resource "aws_s3_bucket" "trail_access_logs" {
+  bucket        = "${local.bucket_name}-access-logs"
+  force_destroy = false
+  tags          = merge(var.tags, { Purpose = "S3 access-log target for ${local.bucket_name}" })
+}
+
+resource "aws_s3_bucket_public_access_block" "trail_access_logs" {
+  bucket                  = aws_s3_bucket.trail_access_logs.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "trail_access_logs" {
+  bucket = aws_s3_bucket.trail_access_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# S3 access-log delivery from the S3 service principal does not support
+# SSE-KMS — only SSE-S3 (AES256) writes are accepted on the target bucket.
+# tfsec:ignore:aws-s3-encryption-customer-key
+resource "aws_s3_bucket_server_side_encryption_configuration" "trail_access_logs" {
+  bucket = aws_s3_bucket.trail_access_logs.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      # Access-log delivery uses SSE-S3 (AES256) per AWS requirement; SSE-KMS
+      # is not supported for log-delivery writes from the S3 service principal.
+      sse_algorithm = "AES256"
+    }
+    # bucket_key_enabled is only valid for SSE-KMS; omitted (defaults false)
+    # to avoid PutBucketEncryption rejection on AES256 buckets.
+  }
+}
+
+# Grant the S3 log-delivery service principal permission to write access logs
+# into the target bucket. Without this policy, S3 log delivery is silently
+# rejected on buckets where object ACLs are disabled (the default since 2023).
+data "aws_iam_policy_document" "trail_access_logs" {
+  statement {
+    sid    = "S3LogDeliveryWrite"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logging.s3.amazonaws.com"]
+    }
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.trail_access_logs.arn}/*"]
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = [aws_s3_bucket.trail.arn]
+    }
+  }
+
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.trail_access_logs.arn, "${aws_s3_bucket.trail_access_logs.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "trail_access_logs" {
+  bucket = aws_s3_bucket.trail_access_logs.id
+  policy = data.aws_iam_policy_document.trail_access_logs.json
+}
+
+# Lifecycle: transition access logs to IA at 30 days, GLACIER at 90 days,
+# expire at 365 days. S3 access logs accumulate quickly; this caps storage
+# cost without losing the recent operational window.
+resource "aws_s3_bucket_lifecycle_configuration" "trail_access_logs" {
+  bucket = aws_s3_bucket.trail_access_logs.id
+
+  rule {
+    id     = "expire-access-logs"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+    expiration {
+      days = 365
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 90
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "trail" {
+  bucket        = aws_s3_bucket.trail.id
+  target_bucket = aws_s3_bucket.trail_access_logs.id
+  target_prefix = "trail-bucket-access/"
+}
+
 resource "aws_s3_bucket_public_access_block" "trail" {
   bucket                  = aws_s3_bucket.trail.id
   block_public_acls       = true
@@ -150,8 +273,13 @@ resource "aws_iam_role" "cwlogs" {
 
 data "aws_iam_policy_document" "cwlogs" {
   statement {
-    effect    = "Allow"
-    actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    effect  = "Allow"
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents"]
+    # The `:*` suffix on the log-group ARN scopes to log-streams *within this
+    # one log group*. CloudTrail creates log streams dynamically (one per
+    # account/region) and they cannot be enumerated at terraform plan time.
+    # The wildcard is required by the service contract.
+    # tfsec:ignore:aws-iam-no-policy-wildcards
     resources = ["${aws_cloudwatch_log_group.trail.arn}:*"]
   }
 }
