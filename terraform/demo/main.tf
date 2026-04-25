@@ -188,3 +188,29 @@ resource "aws_lambda_function_url" "demo_page" {
   function_name      = aws_lambda_function.demo_page.function_name
   authorization_type = "NONE"
 }
+
+# -----------------------------------------------------------------------------
+# CUI data bucket — Phase 8 workload-module sample (prompt 11). Stamped in the
+# demo so a `terraform validate` / `apply` exercises the module end-to-end and
+# the demo-destroy workflow exercises its teardown. No CUI is ever stored
+# here (demo carries the "NOT A CUI ENCLAVE" disclaimer); the bucket is wired
+# only for parity-of-shape with the GovCloud root.
+#
+# Demo overrides:
+# - expiration_days = 30  (test data must not accumulate / cost)
+# - tags include Project = "cmmc-enclave-demo" so demo-destroy and the
+#   verify-destroy assertion can tag-filter cleanup.
+# -----------------------------------------------------------------------------
+module "s3_cui" {
+  source = "../modules/workloads/s3_cui"
+
+  name        = local.name_prefix
+  kms_key_arn = module.kms.key_arns["data"]
+
+  expiration_days           = 30
+  access_log_retention_days = 30
+
+  tags = {
+    Project = "cmmc-enclave-demo"
+  }
+}

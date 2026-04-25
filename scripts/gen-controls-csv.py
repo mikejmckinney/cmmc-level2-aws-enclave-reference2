@@ -117,15 +117,15 @@ CONTROLS: list[tuple[str, str, str, str, str, str, str, str, str, str]] = [
     ("3.7.6", "MA", "Supervise maintenance by personnel without authorization", "Supervise maintenance activities of personnel without required access authorization.", "none", "", "", "true", "true", "Process control."),
 
     # ----- 3.8 Media Protection (MP) — 9 -----
-    ("3.8.1", "MP", "Protect media containing CUI", "Protect (physically control and securely store) system media containing CUI.", "partial", "S3;EBS;KMS", "module.kms", "true", "false", "AWS handles physical media; KMS encrypts logical media."),
-    ("3.8.2", "MP", "Limit access to media", "Limit access to CUI on system media to authorized users.", "partial", "S3 Bucket Policies;IAM;KMS", "module.kms", "true", "false", "KMS key policies + S3 bucket policies."),
+    ("3.8.1", "MP", "Protect media containing CUI", "Protect (physically control and securely store) system media containing CUI.", "full", "S3;EBS;KMS", "module.kms;module.s3_cui", "true", "false", "AWS handles physical media; KMS encrypts logical media; s3_cui adds public-access block + classification-tag PutObject guard. SSP-written."),
+    ("3.8.2", "MP", "Limit access to media", "Limit access to CUI on system media to authorized users.", "full", "S3 Bucket Policies;IAM;KMS", "module.kms;module.s3_cui", "true", "false", "KMS key policies + S3 bucket policies; s3_cui denies untagged uploads and tag removal. SSP-written."),
     ("3.8.3", "MP", "Sanitize media before disposal", "Sanitize or destroy system media containing CUI before disposal or release.", "none", "", "", "false", "false", "AWS-attested via FedRAMP / SOC reports."),
     ("3.8.4", "MP", "Mark media with CUI markings", "Mark media with necessary CUI markings and distribution limitations.", "none", "", "", "true", "true", "Tagging convention; default_tags include DataClassification."),
     ("3.8.5", "MP", "Control access to media outside controlled areas", "Control access to media containing CUI and maintain accountability.", "none", "", "", "true", "true", "Process control."),
-    ("3.8.6", "MP", "Cryptographic protection of CUI on transport media", "Implement cryptographic mechanisms to protect CUI on digital media during transport.", "partial", "KMS;Snowball Edge", "module.kms", "true", "false", "FIPS-validated KMS; Snowball uses FIPS modules."),
+    ("3.8.6", "MP", "Cryptographic protection of CUI on transport media", "Implement cryptographic mechanisms to protect CUI on digital media during transport.", "full", "KMS;S3;Snowball Edge", "module.kms;module.s3_cui", "true", "false", "FIPS-validated KMS in GovCloud; s3_cui denies any non-TLS request bucket-wide; Snowball uses FIPS modules. SSP-written."),
     ("3.8.7", "MP", "Control use of removable media", "Control the use of removable media on system components.", "none", "", "", "true", "true", "Endpoint MDM / DLP."),
     ("3.8.8", "MP", "Prohibit use of portable storage without identifiable owner", "Prohibit use of portable storage devices when no identifiable owner.", "none", "", "", "true", "true", "Endpoint MDM."),
-    ("3.8.9", "MP", "Protect backups", "Protect the confidentiality of backup CUI at storage locations.", "partial", "AWS Backup;KMS", "module.kms", "true", "false", "KMS-encrypted backups; client wires AWS Backup vaults."),
+    ("3.8.9", "MP", "Protect backups", "Protect the confidentiality of backup CUI at storage locations.", "full", "AWS Backup;S3;KMS", "module.kms;module.s3_cui", "true", "false", "KMS-encrypted backup target with versioning + non-current-version lifecycle via s3_cui; client wires AWS Backup vaults onto it. SSP-written."),
 
     # ----- 3.9 Personnel Security (PS) — 2 -----
     ("3.9.1", "PS", "Screen personnel before authorizing access", "Screen individuals prior to authorizing access to systems containing CUI.", "none", "", "", "true", "true", "HR background-check policy."),

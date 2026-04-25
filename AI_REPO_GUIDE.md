@@ -14,8 +14,8 @@ to CMMC 2.0 Level 2 / NIST SP 800-171 r2, plus a deployable commercial-AWS
 demo. Ships:
 
 - Mermaid network diagram of the boundary, VPC, subnets, and access patterns
-- Six partition-aware Terraform modules (vpc, iam_baseline, kms,
-  cloudtrail, guardduty, config) consumed by both stacks
+- Seven partition-aware Terraform modules (vpc, iam_baseline, kms,
+  cloudtrail, guardduty, config, workloads/s3_cui) consumed by both stacks
 - A GovCloud root that `terraform validate`s clean (not applied here — no
   GovCloud account)
 - A commercial-AWS demo root that `terraform apply` deploys end-to-end
@@ -64,7 +64,7 @@ demo. Ships:
 │   └── workflows/            # CI (terraform-ci, compliance-checks, demo-*)
 │
 ├── terraform/                # added in prompts 03–05
-│   ├── modules/              # vpc, iam_baseline, kms, cloudtrail, guardduty, config
+│   ├── modules/              # vpc, iam_baseline, kms, cloudtrail, guardduty, config, workloads/s3_cui
 │   ├── govcloud/             # GovCloud reference root (validate-clean)
 │   └── demo/                 # commercial-AWS deployable demo
 │

@@ -90,11 +90,22 @@ intact.
 > phases were never "shipped" in the conventional sense — they were
 > reconstructed from the working tree.
 
+## Phase 8 — Workload module library (prompt 11) 🚧 in progress
+
+Library of opinionated workload modules consumers compose on top of the
+foundational stack. Each module is independently shippable per
+[ADR-011](../docs/decisions/adr-011-phase-8-workload-module-scope.md);
+backlog tracked in issues #16, #17, #18, #19. The shared destroy-workflow
+verification gate (issue #15) gates the stateful modules.
+
+- `s3_cui` — shipped via PR for #16. Dual-bucket pattern (data + access
+  logs), SSE-KMS, public-access block, deny-non-TLS, classification-tag
+  enforcement on PutObject. Promotes 4 MP-family controls (3.8.1, 3.8.2,
+  3.8.6, 3.8.9) from `partial` to `full`.
+
 ## Future / out-of-scope (not on this roadmap)
 
-- A full SSP (writing all 100 remaining stubs) — this is the consultant's
+- A full SSP (writing all 96 remaining stubs) — this is the consultant's
   / DIB's job, not the reference repo's.
-- A workload module library (RDS-with-CUI patterns, S3 data-classification
-  patterns, etc.) — possible Phase 8; track in a follow-up issue.
 - FedRAMP overlays, Impact Level 4/5 mappings — separate project.
 - Org-trail / multi-account / Control Tower automation — separate project.

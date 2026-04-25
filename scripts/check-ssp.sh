@@ -27,8 +27,8 @@ if [ "$csv_count" != "$ssp_count" ]; then
 fi
 
 todo_count=$(grep -cE '^\*\*Implementation status:\*\* TODO$' "$SSP" || true)
-if [ "$todo_count" != "100" ]; then
-  echo "FAIL: expected 100 TODO stubs, got $todo_count"
+if [ "$todo_count" != "96" ]; then
+  echo "FAIL: expected 96 TODO stubs, got $todo_count"
   exit 1
 fi
 

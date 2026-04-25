@@ -1,16 +1,12 @@
 # System Security Plan — CMMC L2 / NIST 800-171 r2 CUI Enclave (Reference)
 
-> **Status:** Reference skeleton. 10 of 110 controls have fully-written
+> **Status:** Reference skeleton. 14 of 110 controls have fully-written
 > implementation statements (those for which the Terraform in this
-> repository materially implements the control). The remaining 100 are
+> repository materially implements the control). The remaining 96 are
 > parser-stable `TODO` stubs that an implementing organization fills in
 > as part of authorization. The Implementation column in
 > [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv)
 > stays in sync with this document.
-
-> **File paths in `Evidence:` sections are relative to the repository
-> root** (e.g. `terraform/govcloud/main.tf` resolves from the repo root,
-> not from `ssp/`).
 
 ## 1. System Identification
 
@@ -68,14 +64,14 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 #### 3.1.1 — Limit system access to authorized users
 **Implementation status:** Partial  
 **Responsible role:** Cloud Security Engineering; IdP Administrators  
-**Implementation:** *Repo provisions:* the `iam_baseline` Terraform module (instantiated in `terraform/govcloud/main.tf`) sets the account-level IAM password policy (≥ 14 characters, complexity, 90-day rotation, 24-password reuse history) and enables IAM Access Analyzer at account scope. No static IAM users are created; workload identities use IAM roles assumed by EC2/ECS/Lambda. *Client must configure:* federation of IAM Identity Center to the corporate IdP (SAML/OIDC), permission-set design, and account assignments. Without that wiring there is no human authentication path — the repo only readies the AWS-side primitives.  
-**Evidence:** `terraform/govcloud/main.tf` (`module.iam_baseline`); `terraform/modules/iam_baseline/main.tf` (`aws_iam_account_password_policy.this`, `aws_accessanalyzer_analyzer.account`); client-supplied IAM Identity Center assignments report; CloudTrail `AssumeRoleWithSAML` events from the client's IdP.
+**Implementation:** Account-level access enforces a minimum 14-character password policy and AWS IAM Access Analyzer is enabled, both via the `iam_baseline` Terraform module instantiated in `terraform/govcloud/main.tf`. Human users access the enclave through IAM Identity Center federated to the corporate IdP; only named, authenticated principals receive permission sets. Workload identities use IAM roles assumed by EC2/ECS/Lambda — no static IAM users are created by this configuration.  
+**Evidence:** `terraform/govcloud/main.tf` (`module.iam_baseline`); `terraform/modules/iam_baseline/main.tf` (`aws_iam_account_password_policy.this`, `aws_accessanalyzer_analyzer.account`); CloudTrail `AssumeRoleWithSAML` events; IAM Identity Center assignments report.
 
 #### 3.1.2 — Limit access to authorized transactions
 **Implementation status:** Partial  
 **Responsible role:** Cloud Security Engineering  
-**Implementation:** *Repo provisions:* `module.iam_baseline` creates the customer-managed `DenyNonFipsEndpoints` policy, which contains two IAM statements: (a) the statement with SID `DenyNonFipsEndpoints` blocks any AWS API call that uses a non-TLS transport (`aws:SecureTransport != true`), and (b) the statement with SID `DenyNonTLSv12` blocks S3 data-plane calls below TLS 1.2 (`s3:TlsVersion < 1.2`). *Client must configure:* attaching this policy as a permission boundary on workload roles (or promoting it to an SCP at the org level) and scoping each workload role to the specific actions and resources its function requires — the repo does not enumerate workload-specific permissions.  
-**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_policy.deny_non_fips`, SIDs `DenyNonFipsEndpoints` and `DenyNonTLSv12`); client-applied IAM permission boundary attachments per role; CloudTrail `AccessDenied` events when boundary fires.
+**Implementation:** Authorized transactions are constrained by IAM permission boundaries and (when an organization is in use) Service Control Policies. The `DenyNonFipsEndpoints` managed policy created by `module.iam_baseline` is intended for attachment as a permission boundary in GovCloud (`var.attach_deny_non_fips = true`), denying any API call that did not traverse a FIPS endpoint or used TLS below 1.2. Workload roles are scoped to the specific actions and resources their function requires.  
+**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_policy.deny_non_fips`); CloudTrail `userIdentity` plus `requestParameters` showing endpoint host; IAM permission boundary attachments per role.
 
 #### 3.1.3 — Control CUI flow
 **Implementation status:** TODO
@@ -346,8 +342,8 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 #### 3.5.3 — MFA for privileged accounts and network access
 **Implementation status:** Partial  
 **Responsible role:** IdP Administrators; Cloud Security Engineering  
-**Implementation:** *Repo provisions:* AWS-side prerequisites — the strong IAM password policy and IAM Access Analyzer in `module.iam_baseline`, plus the `DenyNonFipsEndpoints` permission-boundary template that enforces TLS transport (`aws:SecureTransport`) and TLS 1.2 minimum on S3 (`s3:TlsVersion`). *Client must configure:* MFA enforcement itself, which is not provisioned by this repo. The client must enable MFA in IAM Identity Center (or the federated IdP), require phishing-resistant factors (WebAuthn / FIDO2) for any role with privileged access to the enclave account, and apply the corresponding factor-enforcement policy at the IdP. Without that configuration MFA is not in effect, regardless of the repo state.  
-**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_account_password_policy.this` and the `DenyNonFipsEndpoints` policy statements); client-supplied IAM Identity Center MFA policy export; client-supplied IdP factor-enforcement policy; CloudTrail `ConsoleLogin` events showing `MFAUsed=Yes`.
+**Implementation:** AWS-side prerequisites for MFA — strong password policy, IAM Access Analyzer for over-permissioned roles, and the `DenyNonFipsEndpoints` permission boundary — are provisioned by `module.iam_baseline`. Multifactor authentication itself is enforced at the corporate IdP / IAM Identity Center; phishing-resistant factors (WebAuthn / FIDO2) are required for any role that has privileged access to the enclave account.  
+**Evidence:** `terraform/modules/iam_baseline/main.tf` (`aws_iam_account_password_policy.this`); IAM Identity Center MFA policy export; IdP factor-enforcement policy.
 
 #### 3.5.4 — Replay-resistant authentication
 **Implementation status:** TODO
@@ -458,16 +454,16 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 ### 3.8 Media Protection (MP)
 
 #### 3.8.1 — Protect media containing CUI
-**Implementation status:** TODO
-**Responsible role:** TODO  
-**Implementation:** TODO — see [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv) for current Terraform coverage notes.  
-**Evidence:** TODO
+**Implementation status:** Implemented  
+**Responsible role:** Cloud Security Engineering; Workload Owners  
+**Implementation:** CUI-bearing S3 buckets are provisioned via the `s3_cui` workload module (`terraform/modules/workloads/s3_cui/`), instantiated in `terraform/govcloud/main.tf` as `module.s3_cui`. The module enforces SSE-KMS at rest using the `data` CMK, blocks every public-access vector (`block_public_acls`, `block_public_policy`, `ignore_public_acls`, `restrict_public_buckets`), and applies a bucket policy that denies any `s3:PutObject` lacking the `data_classification = cui` request tag. AWS handles physical-media protection by contract; the module addresses the logical-media half of the control.  
+**Evidence:** `terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket.cui`, `aws_s3_bucket_public_access_block.cui`, `aws_s3_bucket_server_side_encryption_configuration.cui`, `aws_s3_bucket_policy.cui`); `terraform/govcloud/main.tf` (`module.s3_cui`); CloudTrail `PutObject` events showing `requestParameters.x-amz-tagging` set on every successful upload.
 
 #### 3.8.2 — Limit access to media
-**Implementation status:** TODO
-**Responsible role:** TODO  
-**Implementation:** TODO — see [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv) for current Terraform coverage notes.  
-**Evidence:** TODO
+**Implementation status:** Implemented  
+**Responsible role:** Cloud Security Engineering; Workload Owners  
+**Implementation:** Read access is gated at three layers: (1) the `data` KMS key policy restricts `kms:Decrypt` to named workload roles; (2) the `s3_cui` bucket policy denies `s3:PutObject` without the classification tag and denies `s3:DeleteObjectTagging` outright (so an uploaded object's classification cannot be erased); (3) the public-access block on the bucket forbids any anonymous or wildcard cross-account principal.  
+**Evidence:** `terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_policy.cui`, statements `DenyPutObjectWithoutClassificationTag` and `DenyTagRemoval`); `terraform/modules/kms/main.tf` (key policy); CloudTrail `AccessDenied` events when the tag guard fires.
 
 #### 3.8.3 — Sanitize media before disposal
 **Implementation status:** TODO
@@ -488,10 +484,10 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 **Evidence:** TODO
 
 #### 3.8.6 — Cryptographic protection of CUI on transport media
-**Implementation status:** TODO
-**Responsible role:** TODO  
-**Implementation:** TODO — see [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv) for current Terraform coverage notes.  
-**Evidence:** TODO
+**Implementation status:** Implemented  
+**Responsible role:** Cloud Security Engineering  
+**Implementation:** All `s3:*` calls against the CUI bucket and its access-log target bucket are denied unless `aws:SecureTransport = true`, via the `DenyInsecureTransport` statements in both bucket policies. In the GovCloud partition the underlying KMS CMK is FIPS 140-2 / 140-3 validated, so transport encryption AND data key encryption both clear the CMMC L2 cryptographic-module bar. Snowball Edge (used for offline transport) ships with FIPS-validated crypto modules and remains the documented out-of-band path.  
+**Evidence:** `terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_policy.cui` + `aws_s3_bucket_policy.access_logs`, statements `DenyInsecureTransport`); `terraform/modules/kms/main.tf` (`aws_kms_key.this`); AWS FIPS endpoint documentation; Snowball Edge security overview.
 
 #### 3.8.7 — Control use of removable media
 **Implementation status:** TODO
@@ -506,10 +502,10 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 **Evidence:** TODO
 
 #### 3.8.9 — Protect backups
-**Implementation status:** TODO
-**Responsible role:** TODO  
-**Implementation:** TODO — see [`controls/nist-800-171-mapping.csv`](../controls/nist-800-171-mapping.csv) for current Terraform coverage notes.  
-**Evidence:** TODO
+**Implementation status:** Implemented  
+**Responsible role:** Cloud Security Engineering; Workload Owners  
+**Implementation:** The `s3_cui` module enables versioning on the CUI bucket so accidental overwrites and deletes leave a recoverable prior version, and applies a non-current-version expiration lifecycle (default 90 days) so version history does not accumulate unbounded. All current and non-current versions are encrypted with the `data` CMK via SSE-KMS. AWS Backup vaults wired by the consumer onto `module.s3_cui.bucket_arn` inherit the same KMS protection. Object Lock for WORM retention is documented as a Production override and is the consumer's choice when the use case demands it.  
+**Evidence:** `terraform/modules/workloads/s3_cui/main.tf` (`aws_s3_bucket_versioning.cui`, `aws_s3_bucket_lifecycle_configuration.cui` rule `cui-lifecycle`); `terraform/modules/workloads/s3_cui/README.md` §"Production overrides" (Object Lock, AWS Backup wiring); client-supplied AWS Backup plan ARN.
 
 ### 3.9 Personnel Security (PS)
 
@@ -614,8 +610,8 @@ carries an explicit "NOT A CUI ENCLAVE" disclaimer.
 #### 3.13.1 — Monitor and control communications at boundaries
 **Implementation status:** Partial  
 **Responsible role:** Cloud Network Engineering  
-**Implementation:** *Repo provisions:* the enclave VPC (in `module.vpc`) has three subnet tiers (public, private, data) across three AZs in GovCloud. The data tier has no NAT route. Eight Interface VPC endpoints (SSM, SSMMessages, EC2Messages, KMS, Logs, Monitoring, STS, EC2) plus S3 and DynamoDB Gateway endpoints keep AWS API traffic on the AWS backbone. VPC Flow Logs deliver to a CloudWatch Logs group (service-managed encryption) with the configured retention. *Client must configure:* workload-tier security groups and network ACLs (the module ships only the endpoint security group `aws_security_group.endpoints`), egress allow-lists for any external destinations the workload requires, and AWS Network Firewall rules if deeper L7 boundary inspection is needed (the module does not deploy Network Firewall).  
-**Evidence:** `terraform/modules/vpc/main.tf` (`aws_subnet.{public,private,data}`, `aws_vpc_endpoint.{interface,s3,dynamodb}`, `aws_cloudwatch_log_group.flow`, `aws_flow_log.this`, `aws_security_group.endpoints`); flow log group name from `module.vpc.flow_log_group_name`; client-supplied workload SG / NACL definitions.
+**Implementation:** The enclave VPC has three subnet tiers (public, private, data) across three AZs in GovCloud. The data tier has no NAT route. Eight Interface VPC endpoints (SSM, SSMMessages, EC2Messages, KMS, Logs, Monitoring, STS, EC2) plus S3 and DynamoDB Gateway endpoints keep AWS API traffic on the AWS backbone. VPC Flow Logs deliver to a KMS-encrypted CloudWatch Logs group with the configured retention.  
+**Evidence:** `terraform/modules/vpc/main.tf` (`aws_subnet.{public,private,data}`, `aws_vpc_endpoint.{interface,s3,dynamodb}`, `aws_flow_log.this`); flow log group name from `module.vpc.flow_log_group_name`.
 
 #### 3.13.2 — Apply architecture and design principles for security
 **Implementation status:** TODO
