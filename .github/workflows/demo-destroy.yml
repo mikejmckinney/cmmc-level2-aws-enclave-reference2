@@ -69,3 +69,22 @@ jobs:
       - name: terraform destroy
         working-directory: terraform/demo
         run: terraform destroy -auto-approve
+
+      # Stateful-resource cleanup assertion (issue #15).
+      # No-op until a workload module tags an RDS instance with
+      # Project=cmmc-enclave-demo. Once `rds_cui` (issue #19) lands and is
+      # wired into terraform/demo/, this step arms automatically.
+      - name: Verify RDS cleanup
+        run: |
+          set -euo pipefail
+          REMAINING=$(aws rds describe-db-instances \
+            --query "length(DBInstances[?TagList[?Key=='Project' && Value=='cmmc-enclave-demo']])" \
+            --output text)
+          if [ "$REMAINING" != "0" ]; then
+            echo "::error::expected 0 RDS instances tagged Project=cmmc-enclave-demo after destroy, found $REMAINING"
+            aws rds describe-db-instances \
+              --query "DBInstances[?TagList[?Key=='Project' && Value=='cmmc-enclave-demo']].[DBInstanceIdentifier,DBInstanceStatus]" \
+              --output table
+            exit 1
+          fi
+          echo "✅ post-destroy RDS check: 0 instances tagged Project=cmmc-enclave-demo remain"

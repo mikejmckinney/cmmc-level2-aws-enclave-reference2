@@ -127,7 +127,8 @@ Workflows live in [`.github/workflows/`](.github/workflows/):
 | `compliance-checks.yml` | PR + push to `main` | Mermaid lint, CSV schema (`controls/schema.json`), SSP TODO-count guard, CSV↔SSP sync (every `full` row has a written section). |
 | `demo-plan.yml` | PR touching `terraform/demo/**` | Read-only OIDC plan against the demo account; posts plan summary as a PR comment. |
 | `demo-deploy.yml` | `workflow_dispatch` (typed `DEPLOY`, `main` only) | Applies `terraform/demo`; smoke-tests the Function URL for the "NOT A CUI ENCLAVE" disclaimer string. |
-| `demo-destroy.yml` | `workflow_dispatch` (typed `DESTROY`) + nightly cron `0 7 * * *` | Tears down the shared demo. Concurrency-grouped with deploy. |
+| `demo-destroy.yml` | `workflow_dispatch` (typed `DESTROY`) + nightly cron `0 7 * * *` | Tears down the shared demo. Concurrency-grouped with deploy. Post-destroy assertion (issue #15) fails the run if any RDS instance tagged `Project=cmmc-enclave-demo` remains. |
+| `verify-destroy-rds.yml` | `workflow_dispatch` (typed `VERIFY`) only | Sandbox apply+destroy of a throwaway `db.t4g.micro` from [`tests/destroy-verification/rds/`](tests/destroy-verification/rds/). Asserts cleanup via `aws rds describe-db-instances`. Gates the Phase 8 `rds_cui` module per [ADR-011](docs/decisions/adr-011-phase-8-workload-module-scope.md) §2. |
 
 Local equivalents of CI guards:
 
