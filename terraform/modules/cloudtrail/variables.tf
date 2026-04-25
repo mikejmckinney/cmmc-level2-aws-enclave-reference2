@@ -32,6 +32,24 @@ variable "is_multi_region" {
   default     = true
 }
 
+# CloudTrail data events (CMMC AU controls — closes ISS-01).
+#
+# Management events alone do not record S3 GetObject / PutObject or Lambda
+# Invoke calls. CMMC L2 AU.L2-3.3.1/3.3.2 expect data-plane visibility on
+# CUI stores and CUI-processing functions. Pass a list of objects of the
+# form `{ type = "AWS::S3::Object" | "AWS::Lambda::Function" | ...,
+# values = ["arn:aws-us-gov:s3", "arn:aws-us-gov:s3:::specific-bucket/"] }`.
+# Empty list (default) keeps backward compatibility for the demo root,
+# where data events would add cost without compliance benefit (no CUI).
+variable "data_event_resources" {
+  description = "Data-event resources to record (S3 objects, Lambda functions, etc). Empty disables data events."
+  type = list(object({
+    type   = string
+    values = list(string)
+  }))
+  default = []
+}
+
 variable "tags" {
   description = "Tags applied to all resources."
   type        = map(string)

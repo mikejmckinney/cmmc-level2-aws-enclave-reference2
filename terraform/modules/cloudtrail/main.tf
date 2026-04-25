@@ -309,6 +309,26 @@ resource "aws_cloudtrail" "this" {
     include_management_events = true
   }
 
+  # Data-event selector(s) — CMMC AU controls (ISS-01).
+  # Only emitted when callers pass a non-empty `data_event_resources` list,
+  # so the demo root stays cost-stripped while govcloud captures S3 + Lambda
+  # data plane activity.
+  dynamic "event_selector" {
+    for_each = length(var.data_event_resources) > 0 ? [1] : []
+    content {
+      read_write_type           = "All"
+      include_management_events = false
+
+      dynamic "data_resource" {
+        for_each = var.data_event_resources
+        content {
+          type   = data_resource.value.type
+          values = data_resource.value.values
+        }
+      }
+    }
+  }
+
   depends_on = [aws_s3_bucket_policy.trail]
 }
 
@@ -325,8 +345,14 @@ locals {
       pattern = "{ ($.eventName = DeleteGroupPolicy) || ($.eventName = DeleteRolePolicy) || ($.eventName = DeleteUserPolicy) || ($.eventName = PutGroupPolicy) || ($.eventName = PutRolePolicy) || ($.eventName = PutUserPolicy) || ($.eventName = CreatePolicy) || ($.eventName = DeletePolicy) || ($.eventName = CreatePolicyVersion) || ($.eventName = DeletePolicyVersion) || ($.eventName = AttachRolePolicy) || ($.eventName = DetachRolePolicy) || ($.eventName = AttachUserPolicy) || ($.eventName = DetachUserPolicy) || ($.eventName = AttachGroupPolicy) || ($.eventName = DetachGroupPolicy) }"
       name    = "IAMPolicyChange"
     }
+    # ConsoleLogin is emitted for both IAMUser and AssumedRole identities
+    # (the latter covers SSO/identity-federation sign-ins). Filtering on
+    # userIdentity.type missed the AssumedRole path entirely (ISS-03), so
+    # an SSO user signing in without MFA at the IdP would not surface here.
+    # Drop the type constraint and let the alarm fire on any successful
+    # console sign-in that lacks MFAUsed=Yes.
     console_no_mfa = {
-      pattern = "{ ($.eventName = ConsoleLogin) && ($.additionalEventData.MFAUsed != \"Yes\") && ($.userIdentity.type = \"IAMUser\") && ($.responseElements.ConsoleLogin = \"Success\") }"
+      pattern = "{ ($.eventName = ConsoleLogin) && ($.additionalEventData.MFAUsed != \"Yes\") && ($.responseElements.ConsoleLogin = \"Success\") }"
       name    = "ConsoleSignInWithoutMFA"
     }
     kms_key_disable = {

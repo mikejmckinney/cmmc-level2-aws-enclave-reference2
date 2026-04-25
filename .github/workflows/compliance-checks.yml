@@ -24,14 +24,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # ISS-15: mmdc drives a headless Chromium via puppeteer. The default
+      # GitHub-hosted runner is missing the required shared libs, so a bare
+      # `npx mermaid-cli` call fails with "Failed to launch the browser
+      # process!". Install puppeteer's documented Linux deps first, then
+      # pass a puppeteer config that disables the chromium sandbox (the
+      # runner UID has no /proc/self/setgroups capability needed for it).
+      - name: Install Chromium runtime deps for puppeteer
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates fonts-liberation libasound2t64 libatk-bridge2.0-0 \
+            libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 \
+            libfontconfig1 libgbm1 libgcc-s1 libglib2.0-0 libgtk-3-0 \
+            libnspr4 libnss3 libpango-1.0-0 libx11-6 libx11-xcb1 libxcb1 \
+            libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 \
+            libxshmfence1 wget xdg-utils
       - name: Render every Mermaid block in diagrams/
         run: |
           set -euo pipefail
           mkdir -p /tmp/mermaid-out
+          cat > /tmp/puppeteer.json <<'EOF'
+          { "args": ["--no-sandbox", "--disable-setuid-sandbox"] }
+          EOF
           for f in diagrams/*.md; do
             [ -f "$f" ] || continue
             echo "Linting $f"
-            npx -y @mermaid-js/mermaid-cli@10 -i "$f" -o "/tmp/mermaid-out/$(basename "$f").svg"
+            npx -y @mermaid-js/mermaid-cli@10 \
+              --puppeteerConfigFile /tmp/puppeteer.json \
+              -i "$f" -o "/tmp/mermaid-out/$(basename "$f").svg"
           done
 
   csv-schema:

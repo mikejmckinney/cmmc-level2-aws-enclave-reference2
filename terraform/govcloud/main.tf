@@ -74,6 +74,20 @@ module "cloudtrail" {
   log_retention_days          = var.log_retention_days
   object_lock_retention_years = var.object_lock_retention_years
   is_multi_region             = true
+
+  # CMMC AU.L2-3.3.1/3.3.2 — record S3 object operations and Lambda
+  # invocations across the partition (closes ISS-01). Scope by ARN prefix
+  # so all S3 buckets and Lambda functions in the partition are captured.
+  data_event_resources = [
+    {
+      type   = "AWS::S3::Object"
+      values = ["arn:${data.aws_partition.current.partition}:s3"]
+    },
+    {
+      type   = "AWS::Lambda::Function"
+      values = ["arn:${data.aws_partition.current.partition}:lambda"]
+    },
+  ]
 }
 
 # -----------------------------------------------------------------------------
