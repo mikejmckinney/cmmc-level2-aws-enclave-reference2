@@ -23,10 +23,21 @@ lists come after, not before.
 ## Files here
 
 - **Shared procedural prompts** (template-provided; e.g.) — `pr-resolve-all.md`,
-  `repo-onboarding.md`, `copilot-onboarding.md`, `expand-backlog-entry.md`.
-  These describe procedures, not deliverables, and don't require pre-flight.
+  `drive-pr-to-merge.md`, `repo-onboarding.md`, `copilot-onboarding.md`,
+  `expand-backlog-entry.md`. These describe procedures, not deliverables,
+  and don't require pre-flight.
 - **Project prompts** (you add these) — `NN-<stage>.md`, one per issue.
   These require Analyst pre-flight before implementation.
+
+## Shared procedural prompts — quick reference
+
+| File | Purpose |
+|------|---------|
+| [`pr-resolve-all.md`](pr-resolve-all.md) | Resolve every issue/suggestion/TODO on a PR (Phases 1–4). Use directly when you want to address feedback without auto-merging. |
+| [`drive-pr-to-merge.md`](drive-pr-to-merge.md) | Drive a PR end-to-end: wait for bot reviews → invoke `pr-resolve-all.md` → loop → verify CI → merge under branch protection → close out. Single invocation per PR. |
+| [`repo-onboarding.md`](repo-onboarding.md) | Rebuild `AI_REPO_GUIDE.md` from real repo assets when missing or stale. |
+| [`copilot-onboarding.md`](copilot-onboarding.md) | Refresh `.github/copilot-instructions.md` after onboarding. |
+| [`expand-backlog-entry.md`](expand-backlog-entry.md) | Turn a one-line backlog entry into a fully-specified prompt + issue. |
 
 ## Project prompt series — `cmmc-level2-aws-enclave-reference`
 

@@ -32,6 +32,59 @@ You are resolving every open issue, suggestion, and TODO in this pull request. Y
 > `Part 2/N`, … comments rather than truncating. Apply the Rules section to
 > every phase.
 
+## Stable contract for callers
+
+This prompt is invoked directly by humans/agents AND composed into other
+prompts (notably `.github/prompts/drive-pr-to-merge.md`). The following
+anchors are stable and **MUST** be preserved across edits to this file
+so callers can detect success/failure without re-reading the whole
+procedure each time.
+
+If you change any of these, bump the version below and update every
+caller in the same PR.
+
+**Contract version**: `1.0`
+
+**A. Phase 1 Index comment**
+- Posted as a standalone PR comment before any fix commits.
+- Heading: `## Issue/Suggestion Index`.
+- Each row has a sequential `ISS-NN` ID.
+
+**B. Phase 3 Resolution Report comment**
+- Heading: `## Resolution Report` (followed by the Phase 3 sections in
+  the example block in this file).
+- Includes a per-item status table where every `ISS-NN` has one of the
+  statuses defined in Phase 2 Step 5: `✅ Fixed`, `✅ Already resolved`,
+  `⚠️ Needs clarification`, `⚠️ Partial fix`, `❌ Not reproducible`,
+  `❌ Out of scope`.
+
+**C. Phase 4 Thread auto-resolution table**
+- Sub-heading inside the Phase 3 comment:
+  `### Phase 4 — Thread auto-resolution`.
+- Markdown table with **at minimum** these columns, in this order:
+  `Thread | Thread ID | ISS | Author | Action | Notes`.
+- `Action` column values are one of: `✅ Resolved`, `⚠️ Errored`,
+  `⏭️ Skipped`, `🚫 Refused (human-authored)`.
+- `Thread ID` is the GraphQL node ID (`PRRT_…`).
+
+**D. Caller success criteria**
+A caller (e.g. `drive-pr-to-merge.md`) treats this prompt as
+**successful for one cycle** when **both**:
+1. Every `ISS-NN` in the Phase 3 status table has a non-failing
+   status (`✅ Fixed`, `✅ Already resolved`, `❌ Not reproducible`,
+   or a documented `❌ Out of scope`). `⚠️ Needs clarification` and
+   `⚠️ Partial fix` are escalation signals — the caller must abort
+   the merge cycle, not retry.
+2. Every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, or
+   `🚫 Refused (human-authored)`. `⚠️ Errored` rows are
+   acceptable only if the caller knows the relay-fallback workflow
+   will retry them (see ADR-008).
+
+**E. Cycle counter**
+The relay-comment fingerprint header carries the cycle number:
+`📋 **Review Relay (cycle N/3)**`. Maximum 3 cycles per PR; cycle 4+
+is an abort signal for callers.
+
 ## Phase 1: Build the Issue/Suggestion Index
 
 Scan ALL of these sources for issues, suggestions, requested changes, and TODOs:

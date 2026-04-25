@@ -90,6 +90,10 @@ demo. Ships:
   (`.github/prompts/NN-*.md`) must have a passing Pre-Flight Report
   before implementation begins. See [`AGENTS.md`](AGENTS.md) → "Analyst
   pre-flight gate".
+- **Driving a PR to merge**: invoke
+  [`.github/prompts/drive-pr-to-merge.md`](.github/prompts/drive-pr-to-merge.md)
+  once per PR to wait for bot reviews, resolve them via
+  `pr-resolve-all.md`, verify CI, and merge under branch protection.
 - **Terraform conventions** (once `terraform/` lands): partition-aware via
   `data.aws_partition.current` (no hardcoded `arn:aws:` strings); pinned
   `terraform >= 1.6`, `aws >= 5.40`; `terraform fmt -recursive` clean.
