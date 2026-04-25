@@ -1,0 +1,120 @@
+name: verify-destroy-rds
+
+# Sandbox verification that `terraform destroy` (the same invocation
+# pattern used by `demo-destroy.yml`) cleans up a stateful RDS-Postgres
+# instance end-to-end.
+#
+# Issue #15 / ADR-011 §2 gating: this workflow must run green at least
+# once before the `rds_cui` workload module (issue #19) can ship.
+#
+# This intentionally lives outside `terraform/demo/` so:
+#   - it does NOT run on the nightly `demo-destroy` schedule
+#   - it does NOT contribute to the demo-cost ceiling (ADR-011 §4)
+#   - it can be torn down independently of the demo stack
+#
+# Failure modes deliberately exercised:
+#   - deletion_protection = false  (so destroy is not blocked)
+#   - skip_final_snapshot = true   (so destroy does not require a snapshot name)
+#   - KMS key disposition          (KMS key reuses the existing demo `data` key
+#                                   so destroy does not orphan a CMK)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type VERIFY to confirm. Any other value aborts.'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+# Distinct concurrency group from `demo-deploy` so a manual verification
+# run cannot collide with a scheduled demo destroy.
+concurrency:
+  group: verify-destroy-rds
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: confirm gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation token
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "VERIFY" ]; then
+            echo "::error::confirm input must equal 'VERIFY' (got: '${{ github.event.inputs.confirm }}')"
+            exit 1
+          fi
+
+  verify:
+    name: apply, destroy, assert
+    runs-on: ubuntu-latest
+    environment: demo
+    needs: [guard]
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_WORKDIR: tests/destroy-verification/rds
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Configure AWS credentials (deploy role via OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: gh-verify-destroy-rds-${{ github.run_id }}
+
+      - name: terraform init (local backend; sandbox state)
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform validate
+
+      - name: terraform apply
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform apply -auto-approve
+
+      - name: Record provisioned RDS instance
+        id: provisioned
+        run: |
+          set -euo pipefail
+          ID=$(aws rds describe-db-instances \
+            --query "DBInstances[?TagList[?Key=='Project' && Value=='cmmc-enclave-destroy-verify']].DBInstanceIdentifier | [0]" \
+            --output text)
+          if [ -z "$ID" ] || [ "$ID" = "None" ]; then
+            echo "::error::no RDS instance with Project=cmmc-enclave-destroy-verify tag was provisioned"
+            exit 1
+          fi
+          echo "instance_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "Provisioned RDS instance: $ID"
+
+      - name: terraform destroy
+        working-directory: ${{ env.TF_WORKDIR }}
+        run: terraform destroy -auto-approve
+
+      - name: Assert RDS instance is gone
+        run: |
+          set -euo pipefail
+          ID="${{ steps.provisioned.outputs.instance_id }}"
+          # Wait up to 10 minutes for full deletion (RDS deletion is async).
+          aws rds wait db-instance-deleted --db-instance-identifier "$ID" || true
+          REMAINING=$(aws rds describe-db-instances \
+            --query "length(DBInstances[?TagList[?Key=='Project' && Value=='cmmc-enclave-destroy-verify']])" \
+            --output text)
+          if [ "$REMAINING" != "0" ]; then
+            echo "::error::expected 0 RDS instances tagged Project=cmmc-enclave-destroy-verify, found $REMAINING"
+            aws rds describe-db-instances \
+              --query "DBInstances[?TagList[?Key=='Project' && Value=='cmmc-enclave-destroy-verify']].[DBInstanceIdentifier,DBInstanceStatus]" \
+              --output table
+            exit 1
+          fi
+          echo "✅ destroy verified: 0 RDS instances tagged Project=cmmc-enclave-destroy-verify remain"
