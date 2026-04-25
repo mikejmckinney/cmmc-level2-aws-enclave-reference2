@@ -26,6 +26,16 @@ variable "attach_deny_non_fips" {
   default     = true
 }
 
+variable "fips_allowed_regions" {
+  description = "AWS regions whose service endpoints are FIPS 140-2 / 140-3 validated by default. The DenyNonFipsEndpoints policy denies any API call whose aws:RequestedRegion is NOT in this list. GovCloud regions (us-gov-west-1, us-gov-east-1) serve FIPS endpoints by default, so restricting requests to these regions is the actual FIPS enforcement mechanism. Override only if AWS publishes additional FIPS-by-default regions."
+  type        = list(string)
+  default     = ["us-gov-west-1", "us-gov-east-1"]
+  validation {
+    condition     = length(var.fips_allowed_regions) > 0
+    error_message = "fips_allowed_regions must contain at least one region."
+  }
+}
+
 variable "access_analyzer_name" {
   description = "Name for the IAM Access Analyzer."
   type        = string
