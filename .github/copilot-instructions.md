@@ -92,6 +92,11 @@ to `gh` / MCP / API.
   `.github/prompts/pr-resolve-all.md` (Phases 1–4) so the Resolution
   Report and Phase 4 thread-resolution land consistently — even when no
   `@copilot follow` mention has been posted.
+- To drive a PR end-to-end through review/resolve/merge in a single
+  invocation, follow `.github/prompts/drive-pr-to-merge.md`. It
+  composes with `pr-resolve-all.md`, uses `gh pr merge --auto` so
+  branch protection still gates the merge, and refuses to merge past
+  unresolved human review comments.
 - For bundling small follow-ups vs. splitting them, see
   `docs/guides/agent-best-practices.md` → "Issue and PR Granularity."
 - If a section the work needs is missing from a template, **update the
