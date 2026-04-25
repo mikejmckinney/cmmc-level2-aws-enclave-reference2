@@ -71,8 +71,10 @@ caller in the same PR.
 A caller (e.g. `drive-pr-to-merge.md`) treats this prompt as
 **successful for one cycle** when **both**:
 1. Every `ISS-NN` in the Phase 3 status table has a non-failing
-   status (`✅ Fixed`, `🔁 Already resolved`, or a documented
-   `⏭️ Deferred` / `❌ Won't fix`).
+   status (`✅ Fixed`, `✅ Already resolved`, `❌ Not reproducible`,
+   or a documented `❌ Out of scope`). `⚠️ Needs clarification` and
+   `⚠️ Partial fix` are escalation signals — the caller must abort
+   the merge cycle, not retry.
 2. Every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, or
    `🚫 Refused (human-authored)`. `⚠️ Errored` rows are
    acceptable only if the caller knows the relay-fallback workflow
