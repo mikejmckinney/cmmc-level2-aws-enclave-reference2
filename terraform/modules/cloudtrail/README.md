@@ -6,6 +6,7 @@ Multi-region CloudTrail with KMS-encrypted S3 (Object Lock governance) and Cloud
 
 - `aws_cloudtrail` — multi-region, log file validation, KMS-encrypted, all management events.
 - `aws_s3_bucket` for log delivery — versioned, public-access blocked, SSE-KMS via `var.kms_key_arn`, **Object Lock GOVERNANCE mode** with default retention (`object_lock_retention_years`, default 7y), bucket policy denies non-TLS traffic.
+- `aws_s3_bucket` (`*-access-logs`) — dedicated S3 server access-log target for the trail log bucket. SSE-S3 (AES256) encrypted — SSE-KMS is not supported for S3 log-delivery writes. Has a bucket policy granting `logging.s3.amazonaws.com` `s3:PutObject`; does not log its own access to avoid recursion.
 - `aws_cloudwatch_log_group` — KMS-encrypted, configurable retention (default 365d).
 - IAM role + policy for CloudTrail → CloudWatch Logs delivery.
 - 4 metric filters: `RootAccountUsage`, `IAMPolicyChange`, `ConsoleSignInWithoutMFA`, `KMSKeyDisableOrDelete` (namespace `CMMC/CloudTrail`).

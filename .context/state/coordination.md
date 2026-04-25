@@ -50,6 +50,24 @@ Every `task_*.md` file lives in exactly one of these states. Transitions are one
 
 ## Active Locks
 
+## Lock: pr-7
+<!-- managed-for-pr:7 -->
+**Role**: backend
+**Session**: fix/pr7-tfsec-hardening
+**Claimed At**: 2026-04-25T00:29:49Z
+**Expected Duration**: TBD
+**Paths**:
+- terraform/demo/.tfsec/config.yml
+- terraform/demo/main.tf
+- terraform/govcloud/main.tf
+- terraform/modules/cloudtrail/main.tf
+- terraform/modules/config/main.tf
+- terraform/modules/vpc/main.tf
+- terraform/modules/vpc/variables.tf
+**Depends On**: none
+**Blocks**: none
+**State**: in_progress
+
 ## Lock: pr-5
 <!-- managed-for-pr:5 -->
 **Role**: backend

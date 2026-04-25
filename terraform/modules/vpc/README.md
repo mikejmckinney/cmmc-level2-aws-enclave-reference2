@@ -12,6 +12,7 @@ optional NAT Gateways. Partition-aware via `data.aws_partition.current`.
 | `az_count` | number | `2` | 2 or 3 AZs |
 | `enable_nat_gateway` | bool | `true` | Per-AZ NAT Gateway. Set `false` to force VPC-endpoint-only egress |
 | `flow_log_retention_days` | number | `365` | CloudWatch Logs retention for flow logs |
+| `kms_key_arn` | string | — | **Required.** ARN of the KMS CMK used to encrypt the VPC Flow Logs CloudWatch Logs group |
 | `tags` | map(string) | `{}` | Applied to every created resource |
 
 ## Outputs

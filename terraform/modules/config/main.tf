@@ -52,8 +52,51 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "delivery_access_l
       # is not supported for log-delivery writes from the S3 service principal.
       sse_algorithm = "AES256"
     }
-    bucket_key_enabled = true
+    # bucket_key_enabled is only valid for SSE-KMS; omitted (defaults false)
+    # to avoid PutBucketEncryption rejection on AES256 buckets.
   }
+}
+
+# Grant the S3 log-delivery service principal permission to write access logs
+# into the target bucket. Without this policy, S3 log delivery is silently
+# rejected on buckets where object ACLs are disabled (the default since 2023).
+data "aws_iam_policy_document" "delivery_access_logs" {
+  statement {
+    sid    = "S3LogDeliveryWrite"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["logging.s3.amazonaws.com"]
+    }
+    actions   = ["s3:PutObject"]
+    resources = ["${aws_s3_bucket.delivery_access_logs.arn}/*"]
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = [aws_s3_bucket.delivery.arn]
+    }
+  }
+
+  statement {
+    sid       = "DenyInsecureTransport"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.delivery_access_logs.arn, "${aws_s3_bucket.delivery_access_logs.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "delivery_access_logs" {
+  bucket = aws_s3_bucket.delivery_access_logs.id
+  policy = data.aws_iam_policy_document.delivery_access_logs.json
 }
 
 resource "aws_s3_bucket_logging" "delivery" {
