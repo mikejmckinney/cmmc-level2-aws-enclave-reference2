@@ -26,7 +26,9 @@ You are resolving every open issue, suggestion, and TODO in this pull request. Y
 
 > **How to run this prompt**: Read this entire file before starting. Execute
 > Phase 1, then Phase 2. Execute Phase 4 **before** posting the Phase 3
-> Resolution Report so Phase 3 can include the Phase 4 results. Do not
+> Resolution Report so Phase 3 can include the Phase 4 results. After
+> Phase 3 is posted, execute Phase 5 (Copilot path only) to trigger
+> the fallback workflow if any Phase 4 row was `⚠️ Errored`. Do not
 > interleave or skip phases. If your cumulative response would exceed
 > GitHub's per-comment size limit, post sequential `Part 1/N`,
 > `Part 2/N`, … comments rather than truncating. Apply the Rules section to
@@ -310,13 +312,17 @@ Because Phase 4 runs **before** Phase 3 posts the Resolution Report (see "How to
 
 Use `⚠️ Errored` when the per-thread gate passed but the GraphQL mutation failed (e.g. `FORBIDDEN`). On the Copilot path, the relay-fallback job will pick up `⚠️ Errored` rows by Thread ID, post the audit reply under `CLAUDE_PAT`, and fire `resolveReviewThread`. Use `⏭️ Skipped` only when the per-thread gate failed (human author, status not `✅ Fixed`, etc.) — that signals the fallback to leave the thread alone.
 
-**If at least one row is `⚠️ Errored`** (which is the normal Copilot-path outcome — its cloud-agent token cannot complete the mutations), add the trigger label that fires the fallback workflow. Do this **after** posting the Phase 3 Resolution Report (so the report is in place when the fallback scans for it):
+## Phase 5: Trigger the Phase 4 fallback (Copilot path only)
+
+This phase runs **after** Phase 3 has posted the Resolution Report. Skip it entirely on the Claude path — Claude's `CLAUDE_PAT` already had the permissions to complete Phase 4 mutations, so there is no fallback to trigger.
+
+**If at least one Phase 4 row was `⚠️ Errored`** (the normal Copilot-path outcome — its cloud-agent token cannot complete the mutations), add the trigger label that fires the fallback workflow:
 
 ```bash
 gh pr edit <pr_number> --add-label phase4-needs-fallback
 ```
 
-The `phase4-fallback` job in `.github/workflows/agent-relay-reviews.yml` consumes the label, retries the mutations under `CLAUDE_PAT`, and removes the label on success. Skip this step if every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, or `🚫 Refused (human-authored)` — there is no work for the fallback. See ADR-008 for why the trigger is a label rather than the Phase 3 comment itself.
+The `phase4-fallback` job in `.github/workflows/agent-relay-reviews.yml` consumes the label, finds the most recent Phase 3 Resolution Report on the PR, retries the mutations under `CLAUDE_PAT`, and removes the label on success. Skip this step entirely if every Phase 4 row is `✅ Resolved`, `⏭️ Skipped`, or `🚫 Refused (human-authored)` — there is no work for the fallback. See ADR-008 for why the trigger is a label rather than the Phase 3 comment itself.
 
 ### Safety rules
 

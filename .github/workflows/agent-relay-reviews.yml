@@ -573,29 +573,48 @@ jobs:
           # model the workflow no longer has a specific comment ID from
           # the event payload, so we scan the PR's comments and pick the
           # latest one whose body contains the Phase 4 header and whose
-          # author normalizes to a Copilot identity. ──
+          # author normalizes to a Copilot identity.
+          #
+          # Pagination note: `gh api --paginate --jq` applies the jq
+          # filter to each page separately, so a per-page
+          # `sort_by(...) | last` would emit one match per page and the
+          # command substitution would concatenate them. Use
+          # `--paginate --slurp` to receive an array of pages, then
+          # `add` the pages together inside jq before sorting. ──
           allowlist='["copilot","copilot-swe-agent","copilot-pull-request-reviewer"]'
-          body=$(gh api --paginate "/repos/${REPO}/issues/${PR_NUMBER}/comments" \
-            --jq "[.[]
-                   | select(
-                       (.user.login | sub(\"\\\\[bot\\\\]$\";\"\")
-                                    | ascii_downcase
-                                    | IN(${allowlist}[]))
-                       and (.body | contains(\"### Phase 4 — Thread auto-resolution\"))
-                     )]
-                   | sort_by(.created_at)
-                   | last
-                   | .body // \"\"")
+
+          # Helper: best-effort label removal so re-adding the label is
+          # the supported retry path (pull_request.labeled only fires on
+          # label *addition*; a stale label blocks the retry).
+          clear_trigger_label() {
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label phase4-needs-fallback 2>/dev/null \
+              || echo "⚠️ Could not remove phase4-needs-fallback label (continuing)."
+          }
+
+          body=$(gh api --paginate --slurp "/repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            | jq -r "add
+                     | [.[]
+                        | select(
+                            (.user.login | sub(\"\\\\[bot\\\\]$\";\"\")
+                                         | ascii_downcase
+                                         | IN(${allowlist}[]))
+                            and (.body | contains(\"### Phase 4 — Thread auto-resolution\"))
+                          )]
+                     | sort_by(.created_at)
+                     | last
+                     | .body // \"\"")
 
           if [[ -z "$body" || "$body" == "null" ]]; then
-            echo "No Copilot-authored Phase 3 Resolution Report found on PR #${PR_NUMBER}. Nothing to do."
+            echo "No Copilot-authored Phase 3 Resolution Report found on PR #${PR_NUMBER}. Clearing trigger label and exiting."
+            clear_trigger_label
             exit 0
           fi
 
           # ── 1b. Header sanity check (also implicitly enforced by the
           # jq filter above; kept as belt-and-suspenders). ──
           if ! printf '%s' "$body" | grep -qF '### Phase 4 — Thread auto-resolution'; then
-            echo "Phase 4 header not found in latest Copilot comment. Nothing to do."
+            echo "Phase 4 header not found in latest Copilot comment. Clearing trigger label and exiting."
+            clear_trigger_label
             exit 0
           fi
 
@@ -607,7 +626,8 @@ jobs:
             flag {print}')
 
           if [[ -z "$phase4" ]]; then
-            echo "Phase 4 section was empty after extraction. Nothing to do."
+            echo "Phase 4 section was empty after extraction. Clearing trigger label and exiting."
+            clear_trigger_label
             exit 0
           fi
 
@@ -764,8 +784,7 @@ jobs:
           # label removal is the second. Re-adding the label is the
           # supported way to re-run after a comment edit. Best-effort:
           # a removal failure does not abort the run. ──
-          gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label phase4-needs-fallback \
-            || echo "⚠️ Could not remove phase4-needs-fallback label (continuing)."
+          clear_trigger_label
 
           echo "✅ Phase 4 fallback complete."
 

@@ -194,9 +194,11 @@ relay workflow. V3-style verifiable on a scratch PR.
 **Cons**: The fallback job parses Copilot's Resolution Report markdown,
 so the Phase 4 table format is now load-bearing. Mitigated by adding the
 canonical `Thread ID` column and loud-failing on parse errors rather than
-silently retrying. The new `issue_comment.created` trigger is noisy at
-the workflow-runs level (fires on every PR comment) but the job-level
-`if:` keeps actual run cost near zero.
+silently retrying. With the 2026-04-25 amendment the trigger is
+`pull_request.labeled` + `workflow_dispatch` rather than
+`issue_comment.created`; per-PR run cost is one workflow run per real
+FORBIDDEN failure (Copilot adds the label only when at least one
+Phase 4 row is `⚠️ Errored`) rather than one run per PR comment.
 
 ### Option B: Drop Copilot-path Phase 4 from ADR-007 scope
 
