@@ -31,11 +31,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Skip cleanly (job succeeds) when this repo is not configured for
+      # OIDC-based plans. Without this guard, the configure-aws-credentials
+      # step fails with "Input required and not supplied: aws-region" on
+      # every PR in repos that haven't set the AWS_REGION / AWS_PLAN_ROLE_ARN
+      # secrets — which then blocks `agent-auto-merge.yml`'s readiness gate.
+      # Maintainers who want plans on PRs add the secrets; everyone else
+      # gets a green check.
+      - name: Preflight — skip if AWS OIDC plan secrets are unset
+        id: preflight
+        env:
+          AWS_REGION_SECRET: ${{ secrets.AWS_REGION }}
+          AWS_PLAN_ROLE_ARN: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+        run: |
+          if [[ -z "${AWS_REGION_SECRET}" || -z "${AWS_PLAN_ROLE_ARN}" ]]; then
+            echo "AWS_REGION and/or AWS_PLAN_ROLE_ARN secrets are not set in this repo."
+            echo "Skipping terraform plan (this is a green skip, not a failure)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: hashicorp/setup-terraform@v3
+        if: steps.preflight.outputs.configured == 'true'
         with:
           terraform_version: 1.9.8
 
       - name: Configure AWS credentials (read-only role via OIDC)
+        if: steps.preflight.outputs.configured == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
@@ -43,9 +66,11 @@ jobs:
           role-session-name: gh-demo-plan-${{ github.run_id }}
 
       - name: terraform fmt -check
+        if: steps.preflight.outputs.configured == 'true'
         run: terraform fmt -recursive -check terraform/
 
       - name: terraform init
+        if: steps.preflight.outputs.configured == 'true'
         working-directory: terraform/demo
         run: |
           terraform init \
@@ -54,10 +79,12 @@ jobs:
             -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: terraform validate
+        if: steps.preflight.outputs.configured == 'true'
         working-directory: terraform/demo
         run: terraform validate
 
       - name: terraform plan
+        if: steps.preflight.outputs.configured == 'true'
         working-directory: terraform/demo
         # `set -o pipefail` so a failed `terraform plan` propagates through
         # the `tee` and fails the step. Without it, the plan exit code is
@@ -68,6 +95,7 @@ jobs:
           terraform plan -no-color -out=tfplan | tee plan.txt
 
       - name: Upload plan artifact
+        if: steps.preflight.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ github.run_id }}
@@ -75,6 +103,7 @@ jobs:
           retention-days: 7
 
       - name: Comment plan summary on PR
+        if: steps.preflight.outputs.configured == 'true'
         uses: actions/github-script@v7
         with:
           script: |

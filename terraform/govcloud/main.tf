@@ -74,6 +74,28 @@ module "cloudtrail" {
   log_retention_days          = var.log_retention_days
   object_lock_retention_years = var.object_lock_retention_years
   is_multi_region             = true
+
+  # CMMC AU.L2-3.3.1/3.3.2 — record S3 object operations and Lambda
+  # invocations across the partition (closes ISS-01). Scope by ARN prefix
+  # so all S3 buckets and Lambda functions in the partition are captured.
+  # The S3 prefix uses the explicit triple-colon bucket form
+  # (`arn:<partition>:s3:::`) per CloudTrail data-event ARN syntax for
+  # `AWS::S3::Object` (PR #13 copilot/gemini). Both `arn:<partition>:s3`
+  # and `arn:<partition>:s3:::` match all buckets in the partition under
+  # CloudTrail's prefix-match semantics; the triple-colon form avoids
+  # ambiguity with the bare service ARN. The Lambda prefix
+  # `arn:<partition>:lambda` is the documented account-wide form for
+  # `AWS::Lambda::Function`.
+  data_event_resources = [
+    {
+      type   = "AWS::S3::Object"
+      values = ["arn:${data.aws_partition.current.partition}:s3:::"]
+    },
+    {
+      type   = "AWS::Lambda::Function"
+      values = ["arn:${data.aws_partition.current.partition}:lambda"]
+    },
+  ]
 }
 
 # -----------------------------------------------------------------------------

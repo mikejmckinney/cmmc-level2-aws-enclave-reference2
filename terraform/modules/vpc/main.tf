@@ -12,6 +12,12 @@ locals {
   private_subnets = [for i, az in local.azs : cidrsubnet(var.cidr_block, 4, i + 4)]
   data_subnets    = [for i, az in local.azs : cidrsubnet(var.cidr_block, 4, i + 8)]
 
+  # Interface endpoints provisioned in every VPC. `xray` is included so
+  # CMMC SI-controls evidence (Lambda tracing) can be delivered without
+  # an internet egress path \u2014 the demo VPC has `enable_nat_gateway = false`
+  # and govcloud enclaves are intentionally egress-isolated. Adding xray
+  # here closes the gap flagged on PR #13 (copilot review on demo Lambda
+  # tracing) without each consumer having to wire it themselves.
   interface_endpoints = toset([
     "ssm",
     "ssmmessages",
@@ -21,6 +27,7 @@ locals {
     "monitoring",
     "sts",
     "ec2",
+    "xray",
   ])
 }
 
